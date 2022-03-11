@@ -12,6 +12,8 @@ import uk.ac.bris.cs.scotlandyard.model.Move.*;
 import uk.ac.bris.cs.scotlandyard.model.Piece.*;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.*;
 
+import static com.google.common.base.Verify.verifyNotNull;
+
 
 /**
  * cw-model
@@ -38,8 +40,19 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			final ImmutableSet<Piece> remaining,
 			final ImmutableList<LogEntry> log,
 			final Player mrX,
-			final List<Player> detectives) {
-
+			final List<Player> detectives)
+		{
+			this.setup = setup;
+			this.remaining = remaining;
+			this.log = log;
+			this.mrX = mrX;
+			this.detectives = detectives;	// idk if verifyNotNUll works (com.google.guava:guava:30.1.1-jre (guava-30.1.1-jre.jar))
+			// the below throw verifyExceptions, we want IllegalArgumentExceptions //TODO
+			verifyNotNull(setup, "%s is empty", "setup");
+			verifyNotNull(remaining, "%s is empty", "remaining");
+			verifyNotNull(log, "%s is empty", "log");
+			verifyNotNull(mrX, "%s is empty", "mrX");
+			verifyNotNull(detectives, "%s is empty", "detectives");
 		}
 
 		@Nonnull @Override //TODO
@@ -85,7 +98,11 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 	@Nonnull @Override public GameState build(GameSetup setup, Player mrX, ImmutableList<Player> detectives) {
 		// TODO
-		return new MyGameState(setup, ImmutableSet.of(MrX.MRX), ImmutableList.of(), mrX, detectives);
+		return new MyGameState(setup,
+							   ImmutableSet.of(MrX.MRX), // remaining pieces
+							   ImmutableList.of(), 		 // log
+							   mrX,
+							   detectives);
 	}
 
 
