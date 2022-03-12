@@ -38,13 +38,13 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		private ImmutableSet<Move> moves;	  // Holds the current possible moves
 		//--------------------------------------------------------------------------------------------------------------
 
-		private static void verifyNotNull(Collection maybeNull, String var){
-			//if (maybeNull == null)  { throw new NullPointerException(String.format("%s", var)); }
-			if (maybeNull.isEmpty()){ throw new IllegalArgumentException(String.format("%s v1", var)); }
-		}
-		private static void verifyNotNull(Object maybeNull, String var){
-			if (maybeNull == null){ throw new IllegalArgumentException(String.format("%s v2", var)); }
-		}
+//		private static void verifyNotNull(Collection maybeNull, String var){
+//			//if (maybeNull == null)  { throw new NullPointerException(String.format("%s", var)); }
+//			if (maybeNull.isEmpty()){ throw new IllegalArgumentException(String.format("%s v1", var)); }
+//		}
+//		private static void verifyNotNull(Object maybeNull, String var){
+//			if (maybeNull == null){ throw new IllegalArgumentException(String.format("%s v2", var)); }
+//		}
 //		private static void verifyGraphSupplied(GameState setup) throws IOException {
 //			if (!(setup.getSetup().graph.equals(ScotlandYard.standardGraph()))){
 //				throw new IllegalArgumentException("Graph is not standard");
@@ -53,67 +53,99 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 		private MyGameState(
 			final GameSetup setup,
-			final ImmutableSet<Piece> remaining,
+			final ImmutableSet<Piece> remaining, // remaining pieces
 			final ImmutableList<LogEntry> log,
 			final Player mrX,
-			final List<Player> detectives)
+			final List<Player> detectives
+		)
 		{
 			this.setup = setup;
 			this.remaining = remaining;
 			this.log = log;
 			this.mrX = mrX;
 			this.detectives = detectives;
+			this.winner = ImmutableSet.of();
 
-			verifyNotNull(setup.moves, "You don't have ");
-			verifyNotNull(setup.graph, "There's no graph");
-			verifyNotNull(remaining, "remaining pieces");
-			verifyNotNull(log, "log empty");
+			if (setup.moves.isEmpty()){ throw new IllegalArgumentException("moves are empty");}
+			if (setup.graph == null){ throw new IllegalArgumentException(("graph is null"));}
+			if ((setup.graph.nodes()).size() == 0 ) { throw new IllegalArgumentException("graph is empty");}
 
-			//not sure this MRX stuff does anything.
-//			verifyNotNull(mrX.piece(), "MrX.piece is Null");
-//			verifyNotNull(mrX.location(), "MrX.location is Null");
-//			verifyNotNull(mrX.tickets(), "MrX.tickets is Null");
-//			verifyNotNull(mrX.tickets(), "MrX.tickets is Null");
+			if (remaining == null){throw new IllegalArgumentException("remaining pieces null");}
+			if (remaining.isEmpty()){throw new IllegalArgumentException("remaining pieces empty");}
+			//if (log.isEmpty()){ throw new IllegalArgumentException(("log is empty"));} // weirdly passes 6 test
+			for (LogEntry entry : log){
+				if (entry == null) { throw new IllegalArgumentException("log entry is null");}
+			}
+			if (mrX.tickets().isEmpty()) {throw new IllegalArgumentException("tickets are empty");}
+			if (mrX.piece() == null) {throw new IllegalArgumentException("piece is null");}
 
-			verifyNotNull(detectives, "There are no detectives");
+			for (Player player : detectives){
+				List<Player> others = new ArrayList<Player>(detectives);
+				others.remove(player);
 
-
-
+				if (player.piece() == null) { throw	new IllegalArgumentException("player piece is null");}
+				if (player.tickets().isEmpty()) { throw new IllegalArgumentException("player tickets are empty");}
+				if (!(player.tickets().get(Ticket.DOUBLE) == 0)) { throw new IllegalArgumentException("detective has DOUBLE ticket");}
+				if (!(player.tickets().get(Ticket.SECRET) == 0)) { throw new IllegalArgumentException("detective has SECRET ticket");}
+				for (Player otherPlayers : others){
+					if (player.location() == otherPlayers.location()){ throw new IllegalArgumentException("detective Locations overlap");}
+					if (player.location() == mrX.location()) {throw new IllegalArgumentException("detective and mrx locations overlap");}
+				}
+			}
 		}
+
 
 		@Nonnull @Override //TODO
 		public GameSetup getSetup() {
-			return null;
+			return setup;
 		}
 
-		@Nonnull @Override //TODO
+		@Nonnull @Override //TODO //DONE
 		public ImmutableSet<Piece> getPlayers() {
-			return null;
+			Set<Piece> players = new HashSet<>();
+
+			for (Player piece : detectives) {
+				players.add(piece.piece());
+			}
+
+			players.add(mrX.piece());
+			return ImmutableSet.copyOf(players);
 		}
 
 		@Nonnull @Override
 		public Optional<Integer> getDetectiveLocation(Piece.Detective detective) {
-			return null;
+				for (Player player : detectives) {
+					if (player.piece().webColour().equals(detective.webColour())) {
+						return Optional.of(player.location());
+					}
+				}
+			return Optional.empty();
 		}
 
 		@Nonnull @Override
 		public Optional<TicketBoard> getPlayerTickets(Piece piece) {
+			for (Player player : detectives) {
+				if (player.piece().webColour().equals(piece.webColour())){
+					//player.tickets()
+
+				}
+			}
 			return null;
 		}
 
 		@Nonnull @Override
 		public ImmutableList<LogEntry> getMrXTravelLog() {
-			return null;
+			return log;
 		}
 
 		@Nonnull @Override
 		public ImmutableSet<Piece> getWinner() {
-			return null;
+			return winner;
 		}
 
 		@Nonnull @Override
 		public ImmutableSet<Move> getAvailableMoves() {
-			return null;
+			return moves;
 		}
 
 		@Nonnull @Override //from interface GameState //TODO
@@ -122,13 +154,13 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		}
 	}
 
-	@Nonnull @Override public GameState build(GameSetup setup, Player mrX, ImmutableList<Player> detectives) {
+	@Nonnull @Override public GameState build(GameSetup setup, Player mrX, ImmutableList<Player> detectives) { //, ImmutableSet<Piece> winner
 		// TODO
 		return new MyGameState(setup,
 							   ImmutableSet.of(MrX.MRX), // remaining pieces
 							   ImmutableList.of(), 		 // log
 							   mrX,
-							   detectives);
+							   detectives); //, ImmutableSet.of(winner)
 	}
 
 
