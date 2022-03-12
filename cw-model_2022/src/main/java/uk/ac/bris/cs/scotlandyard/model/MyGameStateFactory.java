@@ -3,16 +3,19 @@ package uk.ac.bris.cs.scotlandyard.model;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import java.io.IOException;
+import java.nio.channels.GatheringByteChannel;
 import java.util.*;
 import javax.annotation.Nonnull;
 
+import com.google.common.graph.ImmutableValueGraph;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
 import uk.ac.bris.cs.scotlandyard.model.Move.*;
 import uk.ac.bris.cs.scotlandyard.model.Piece.*;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.*;
 
-import static com.google.common.base.Verify.verifyNotNull;
+
 
 
 /**
@@ -35,6 +38,19 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		private ImmutableSet<Move> moves;	  // Holds the current possible moves
 		//--------------------------------------------------------------------------------------------------------------
 
+		private static void verifyNotNull(Collection maybeNull, String var){
+			//if (maybeNull == null)  { throw new NullPointerException(String.format("%s", var)); }
+			if (maybeNull.isEmpty()){ throw new IllegalArgumentException(String.format("%s v1", var)); }
+		}
+		private static void verifyNotNull(Object maybeNull, String var){
+			if (maybeNull == null){ throw new IllegalArgumentException(String.format("%s v2", var)); }
+		}
+//		private static void verifyGraphSupplied(GameState setup) throws IOException {
+//			if (!(setup.getSetup().graph.equals(ScotlandYard.standardGraph()))){
+//				throw new IllegalArgumentException("Graph is not standard");
+//			}
+//		}
+
 		private MyGameState(
 			final GameSetup setup,
 			final ImmutableSet<Piece> remaining,
@@ -46,13 +62,23 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.remaining = remaining;
 			this.log = log;
 			this.mrX = mrX;
-			this.detectives = detectives;	// idk if verifyNotNUll works (com.google.guava:guava:30.1.1-jre (guava-30.1.1-jre.jar))
-			// the below throw verifyExceptions, we want IllegalArgumentExceptions //TODO
-			verifyNotNull(setup, "%s is empty", "setup");
-			verifyNotNull(remaining, "%s is empty", "remaining");
-			verifyNotNull(log, "%s is empty", "log");
-			verifyNotNull(mrX, "%s is empty", "mrX");
-			verifyNotNull(detectives, "%s is empty", "detectives");
+			this.detectives = detectives;
+
+			verifyNotNull(setup.moves, "You don't have ");
+			verifyNotNull(setup.graph, "There's no graph");
+			verifyNotNull(remaining, "remaining pieces");
+			verifyNotNull(log, "log empty");
+
+			//not sure this MRX stuff does anything.
+//			verifyNotNull(mrX.piece(), "MrX.piece is Null");
+//			verifyNotNull(mrX.location(), "MrX.location is Null");
+//			verifyNotNull(mrX.tickets(), "MrX.tickets is Null");
+//			verifyNotNull(mrX.tickets(), "MrX.tickets is Null");
+
+			verifyNotNull(detectives, "There are no detectives");
+
+
+
 		}
 
 		@Nonnull @Override //TODO
