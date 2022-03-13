@@ -30,6 +30,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		//-------------------------------------------------------
 		private Player mrX;		 			  // Holds Mr. x
 		private List<Player> detectives;      // Detectives
+		private List<Player> allPlayers;
 		//-------------------------------------------------------
 		private ImmutableSet<Piece> remaining;// Pieces remaining
 		private ImmutableSet<Piece> winner;   // Current Winner(s)
@@ -66,6 +67,11 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.detectives = detectives;
 			this.winner = ImmutableSet.of();
 
+			this.allPlayers = new ArrayList<>();
+			allPlayers.addAll(detectives);
+			allPlayers.add(mrX);
+
+
 			if (setup.moves.isEmpty()){ throw new IllegalArgumentException("moves are empty");}
 			if (setup.graph == null){ throw new IllegalArgumentException(("graph is null"));}
 			if ((setup.graph.nodes()).size() == 0 ) { throw new IllegalArgumentException("graph is empty");}
@@ -93,6 +99,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				}
 			}
 		}
+
+
 
 
 		@Nonnull @Override //TODO
@@ -124,13 +132,19 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 		@Nonnull @Override
 		public Optional<TicketBoard> getPlayerTickets(Piece piece) {
-			for (Player player : detectives) {
-				if (player.piece().webColour().equals(piece.webColour())){
-					//player.tickets()
 
+
+			for (Player player : allPlayers) {
+				if (player.piece().webColour().equals(piece.webColour())) {
+					return Optional.of(new TicketBoard() {
+						@Override
+						public int getCount(@Nonnull Ticket ticket) {
+							return player.tickets().get(ticket);
+						}
+					});
 				}
 			}
-			return null;
+			return Optional.empty();
 		}
 
 		@Nonnull @Override
