@@ -112,11 +112,10 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		public ImmutableSet<Piece> getPlayers() {
 			Set<Piece> players = new HashSet<>();
 
-			for (Player piece : detectives) {
-				players.add(piece.piece());
+			for (Player player : allPlayers) {
+				players.add(player.piece());
 			}
 
-			players.add(mrX.piece());
 			return ImmutableSet.copyOf(players);
 		}
 
@@ -157,10 +156,117 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			return winner;
 		}
 
+
+
+		// HELPER METHOD: given a player, its location, and a set of all possible SingleMoves it can make, output a set of all possible DoubleMoves it can make.
+		private static Set<DoubleMove> makeDoubleMoves(GameSetup setup, List<Player> detectives, Player player, Set<SingleMove> singleMoves){
+			// create an empty set to hold all possible DoubleMoves, given all SingleMoves possible.
+			Set<DoubleMove> doubleMoves = new HashSet<>();
+
+			//create a list of detective locations.
+			List<Integer> detLocations = new ArrayList<>();
+			for(Player det : detectives) {
+				detLocations.add(det.location());
+			}
+			//for all possible single moves,
+			for (SingleMove singleMove : singleMoves) {
+				int source = singleMove.source();
+				int destination = singleMove.destination;
+				//go through all possible journeys from each single move's destination,
+				for (int destination2 : setup.graph.adjacentNodes(destination)) {
+					//  if the location is occupied, don't add to the collection of moves to return
+					if (!detLocations.contains(destination2)) {
+						//go through all the possible tickets between the single move destination and its next destination.
+						for (Transport t : Objects.requireNonNull(setup.graph.edgeValueOrDefault(destination, destination2, ImmutableSet.of()))) {
+
+							Ticket ticket2 = t.requiredTicket();
+							//  if the tickets are the same for both moves, make sure the player has at least 2.
+							// (if the player had less, it wouldn't be able to play this double move and use both tickets.)
+							// if so, construct a DoubleMove and add it the collection of moves to return
+							if ((singleMove.ticket == ticket2) && (player.hasAtLeast(ticket2, 2))) {
+								doubleMoves.add(new DoubleMove(player.piece(), source, singleMove.ticket, destination, ticket2, destination2));
+							}
+							//  else if the player has the required tickets, and they are different, construct a DoubleMove and add it the collection of moves to return
+							else if ((singleMove.ticket != ticket2) && (player.has(ticket2))) {
+								doubleMoves.add(new DoubleMove(player.piece(), source, singleMove.ticket, destination, ticket2, destination2));
+							}
+						}
+						// do the same here but for Secret Tickets.
+						if ((singleMove.ticket == Ticket.SECRET) && (player.hasAtLeast(Ticket.SECRET, 2))) {
+							doubleMoves.add(new DoubleMove(player.piece(), source, singleMove.ticket, destination, Ticket.SECRET, destination2));
+						}
+						else if ((singleMove.ticket != Ticket.SECRET) && (player.has(Ticket.SECRET))) {
+							doubleMoves.add(new DoubleMove(player.piece(), source, singleMove.ticket, destination, Ticket.SECRET, destination2));
+						}
+					}
+				}
+			}
+			// return the collection of moves
+			return doubleMoves;
+		}
+
+		//HELPER METHOD: given a player's current location, output a set of all possible SingleMoves the player can make.
+		private static Set<SingleMove> makeSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source){
+
+			// create an empty set to hold all possible SingleMoves for a player.
+			Set<SingleMove> singleMoves = new HashSet<>();
+
+			// create a list of locations of the other detectives.
+			List<Player> otherDet = new ArrayList<>(detectives);
+			otherDet.remove(player);
+			List<Integer> detLocations = new ArrayList<>();
+			for(Player det : otherDet) {
+				detLocations.add(det.location());
+			}
+			//go through all the possible journey's from the source (player location)
+			for(int destination : setup.graph.adjacentNodes(source)) {
+				// find out if destination is occupied by a detective
+				//  if the location is occupied, don't add to the collection of moves to return
+				if (!detLocations.contains(destination)) {
+					for (Transport t : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()))) {
+						// find out if the player has the required tickets
+						// if it does, construct a SingleMove and add it the collection of moves to return
+						Ticket ticket = t.requiredTicket();
+						if (player.has(ticket)) {
+							singleMoves.add(new SingleMove(player.piece(), source, ticket, destination));
+						}
+					}
+					// consider the rules of secret moves here
+					// add moves to the destination via a secret ticket if there are any left with the player
+					if (player.has(Ticket.SECRET)) {
+						singleMoves.add(new SingleMove(player.piece(), source, Ticket.SECRET, destination));
+					}
+				}
+			}
+			//return the collection of moves
+			return singleMoves;
+		}
+
+
 		@Nonnull @Override
 		public ImmutableSet<Move> getAvailableMoves() {
-			return moves;
+			Set<Move> playerMoves = new HashSet<>();
+			for (Player player : allPlayers) {
+
+				for (Piece piece : remaining) {
+					if (player.piece().webColour().equals(piece.webColour())) {
+						Set<SingleMove> playerSingleMoves = makeSingleMoves(setup, detectives, player, player.location());
+						playerMoves.addAll(playerSingleMoves);
+
+						if (player.piece().isMrX()) {
+							if (player.has(Ticket.DOUBLE)) {
+								playerMoves.addAll(makeDoubleMoves(setup, detectives, player, playerSingleMoves));
+							}
+						}
+					}
+
+				}
+			}
+			return ImmutableSet.copyOf(playerMoves);
 		}
+
+
+
 
 		@Nonnull @Override //from interface GameState //TODO
 		public GameState advance(Move move) {
