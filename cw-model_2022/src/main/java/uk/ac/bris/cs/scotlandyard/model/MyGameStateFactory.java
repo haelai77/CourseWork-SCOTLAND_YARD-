@@ -206,7 +206,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		}
 
 		//HELPER METHOD: given a player's current location, output a set of all possible SingleMoves the player can make.
-		private static Set<SingleMove> makeSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source){
+		private static Set<SingleMove> makeSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source) {
 
 			// create an empty set to hold all possible SingleMoves for a player.
 			Set<SingleMove> singleMoves = new HashSet<>();
@@ -217,7 +217,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			List<Integer> otherDetLocations = new ArrayList<>();
 			otherDets.forEach(x -> otherDetLocations.add(x.location())); //finds all the locations of the other players
-			
+
 			//go through all the possible journeys (single moves) from the source (player location)
 			for(int destination : setup.graph.adjacentNodes(source)) {
 				// find out if destination is occupied by a detective
@@ -238,26 +238,25 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					}
 				}
 			}
-			setup.graph.adjacentNodes(source) // <<<the destinations
-					.stream()
-					.filter( destination -> otherDetLocations.stream()	//<< detective locations
-											.anyMatch(detLocation -> !detLocation.equals(destination)))	//<< keeps all destinations that aren't detective locations.
-											.forEach( destination -> setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())
-																	 .stream()
-																	 .filter(ticket -> player.has(ticket.requiredTicket()))
-																	 .forEach(ticket -> singleMoves.add(new SingleMove(player.piece(), source, ticket, destination));)
-
-							)
-//			setup.graph.adjacentNodes(source)
-//					.forEach(
-//					destination -> otherDetLocations.stream()
-//									.filter( detLocations -> !Objects.equals(detLocations, destination))	// filters out destinations that are also detective locations
-//									.forEach()
-//
-//			)
-
-			//return the collection of moves
 			return singleMoves;
+
+//			setup.graph.adjacentNodes(source) // <<<the destinations
+//					.stream()
+//					.filter(destination -> otherDetLocations.stream()    //<< detective locations
+//							.anyMatch(detLocation -> !detLocation.equals(destination)))    //<< keeps all destinations that aren't detective locations.
+//					.forEach(
+//							destination -> {
+//							 setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())// << for each destination filter out where tickets don't exist
+//							.stream()
+//							.filter(ticket -> player.has(ticket.requiredTicket()))
+//							.forEach(ticket -> singleMoves.add(new SingleMove(player.piece(), source, ticket.requiredTicket(), destination)));
+//
+//							if (player.has(Ticket.SECRET)) {
+//							singleMoves.add(new SingleMove(player.piece(), source, Ticket.SECRET, destination));
+//							}
+//
+//							});
+//			return singleMoves;
 		}
 
 
