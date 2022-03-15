@@ -237,6 +237,11 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					}
 				}
 			}
+			setup.graph.adjacentNodes(source).forEach(	//for each destination
+					destination -> otherDetLocations.forEach( otherLocation -> )
+
+			)
+
 			//return the collection of moves
 			return singleMoves;
 		}
