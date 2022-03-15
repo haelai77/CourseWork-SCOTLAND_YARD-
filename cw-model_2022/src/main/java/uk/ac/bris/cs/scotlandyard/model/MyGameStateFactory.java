@@ -67,8 +67,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.detectives = detectives;
 			this.winner = ImmutableSet.of();
 
-			this.allPlayers = new ArrayList<>();
-			allPlayers.addAll(detectives);
+			this.allPlayers = new ArrayList<>(detectives);
 			allPlayers.add(mrX);
 
 
@@ -187,7 +186,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 								doubleMoves.add(new DoubleMove(player.piece(), source, singleMove.ticket, destination, ticket2, destination2));
 							}
 							//  else if the player has the required tickets, and they are different, construct a DoubleMove and add it the collection of moves to return
-							else if ((singleMove.ticket != ticket2) && (player.has(ticket2))) {
+							else if ((singleMove.ticket != ticket2) && player.has(ticket2)) {
 								doubleMoves.add(new DoubleMove(player.piece(), source, singleMove.ticket, destination, ticket2, destination2));
 							}
 						}
@@ -253,16 +252,15 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						Set<SingleMove> playerSingleMoves = makeSingleMoves(setup, detectives, player, player.location());
 						playerMoves.addAll(playerSingleMoves);
 
-						if (player.piece().isMrX()) {
-							if (player.has(Ticket.DOUBLE)) {
+						if (player.piece().isMrX() && player.has(Ticket.DOUBLE)) {
 								playerMoves.addAll(makeDoubleMoves(setup, detectives, player, playerSingleMoves));
-							}
 						}
 					}
 
 				}
 			}
 			return ImmutableSet.copyOf(playerMoves);
+
 		}
 
 
@@ -270,6 +268,32 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 		@Nonnull @Override //from interface GameState //TODO
 		public GameState advance(Move move) {
+			if(!getAvailableMoves().contains(move)) throw new IllegalArgumentException("Illegal move: "+move);
+			/*TODO:
+			 If it's Mr X's turn (which can be checked using move.commencedBy):
+				Add their move(s) to the log
+				If a move should be revealed according to the GameSetup, reveal the destination in the log, otherwise keep the desination hidden
+				Take the used ticket(s) away from Mr X
+				Move Mr X's position to their new destination
+				Swap to the detectives turn
+			If it's the detectives' turn:
+				Move the detective to their new destination
+				Take the used ticket from the detective and give it to Mr X
+				Ensure that particular detective won't move again this round (i.e. when getAvailableMoves() is called, it won't include any moves from that detective)
+				If there are no more possible detective moves, swap to Mr X's turn
+
+			 */
+			if (move.commencedBy() == mrX.piece()) {
+				Integer destination = move.accept(new Move.Visitor<>(){
+					  @Override public Integer visit(SingleMove singleMove){
+
+						  return 0;
+					  }
+					  @Override public Integer visit(DoubleMove doubleMove){
+						  return 0;
+					  }
+				});
+			}
 			return null;
 		}
 	}
