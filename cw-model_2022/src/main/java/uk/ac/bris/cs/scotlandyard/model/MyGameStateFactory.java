@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableSet;
 
 import java.io.IOException;
 import java.nio.channels.GatheringByteChannel;
+import java.security.KeyStore;
 import java.util.*;
 import javax.annotation.Nonnull;
 
@@ -15,7 +16,7 @@ import uk.ac.bris.cs.scotlandyard.model.Move.*;
 import uk.ac.bris.cs.scotlandyard.model.Piece.*;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.*;
 
-
+import static java.util.stream.Collectors.toList;
 
 
 /**
@@ -220,9 +221,9 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			//go through all the possible journeys (single moves) from the source (player location)
 			for(int destination : setup.graph.adjacentNodes(source)) {
 				// find out if destination is occupied by a detective
-				//  if the location is occupied, don't add to the collection of moves to return
+				// if the location is occupied, don't add to the collection of moves to return
 				if (!otherDetLocations.contains(destination)) {
-					for (Transport t : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()))) {
+					for (Transport t : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()))) {// << big thing is vehicles (edge values)
 						// find out if the player has the required tickets
 						// if it does, construct a SingleMove and add it the collection of moves to return
 						Ticket ticket = t.requiredTicket();
@@ -237,10 +238,23 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					}
 				}
 			}
-			setup.graph.adjacentNodes(source).forEach(	//for each destination
-					destination -> otherDetLocations.forEach( otherLocation -> )
+			setup.graph.adjacentNodes(source) // <<<the destinations
+					.stream()
+					.filter( destination -> otherDetLocations.stream()	//<< detective locations
+											.anyMatch(detLocation -> !detLocation.equals(destination)))	//<< keeps all destinations that aren't detective locations.
+											.forEach( destination -> setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())
+																	 .stream()
+																	 .filter(ticket -> player.has(ticket.requiredTicket()))
+																	 .forEach(ticket -> singleMoves.add(new SingleMove(player.piece(), source, ticket, destination));)
 
-			)
+							)
+//			setup.graph.adjacentNodes(source)
+//					.forEach(
+//					destination -> otherDetLocations.stream()
+//									.filter( detLocations -> !Objects.equals(detLocations, destination))	// filters out destinations that are also detective locations
+//									.forEach()
+//
+//			)
 
 			//return the collection of moves
 			return singleMoves;
@@ -277,7 +291,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			/*TODO:
 			 If it's Mr X's turn (which can be checked using move.commencedBy):
 				Add their move(s) to the log
-				If a move should be revealed according to the GameSetup, reveal the destination in the log, otherwise keep the desination hidden
+				If a move should be revealed according to the GameSetup, reveal the destination in the log, otherwise keep the destination hidden
 				Take the used ticket(s) away from Mr X
 				Move Mr X's position to their new destination
 				Swap to the detectives turn
