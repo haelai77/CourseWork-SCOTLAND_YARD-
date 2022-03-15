@@ -95,6 +95,7 @@ public interface Move extends Serializable {
 			this.ticket = Objects.requireNonNull(ticket);
 			this.destination = destination;
 		}
+
 		@Nonnull @Override public Piece commencedBy() { return piece; }
 		@Nonnull @Override public Iterable<Ticket> tickets() { return ImmutableList.of(ticket); }
 		@Override public int source() { return source; }

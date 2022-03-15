@@ -31,7 +31,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		//-------------------------------------------------------
 		private Player mrX;		 			  // Holds Mr. x
 		private List<Player> detectives;      // Detectives
-		private List<Player> allPlayers;
+		private List<Player> allPlayers;	  // Holds Mr.X and detectives
 		//-------------------------------------------------------
 		private ImmutableSet<Piece> remaining;// Pieces remaining
 		private ImmutableSet<Piece> winner;   // Current Winner(s)
@@ -100,16 +100,14 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			}
 		}
 
-
-
-
 		@Nonnull @Override //TODO
 		public GameSetup getSetup() {
 			return setup;
 		}
 
 		@Nonnull @Override //TODO //DONE
-		public ImmutableSet<Piece> getPlayers() {
+		public ImmutableSet<Piece> getPlayers() { // returns all player pieces
+
 			Set<Piece> players = new HashSet<>();
 
 			for (Player player : allPlayers) {
@@ -155,8 +153,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		public ImmutableSet<Piece> getWinner() {
 			return winner;
 		}
-
-
 
 		// HELPER METHOD: given a player, its location, and a set of all possible SingleMoves it can make, output a set of all possible DoubleMoves it can make.
 		private static Set<DoubleMove> makeDoubleMoves(GameSetup setup, List<Player> detectives, Player player, Set<SingleMove> singleMoves){
@@ -244,9 +240,10 @@ public final class MyGameStateFactory implements Factory<GameState> {
 //					.stream()
 //					.filter(destination -> otherDetLocations.stream()    //<< detective locations
 //							.anyMatch(detLocation -> !detLocation.equals(destination)))    //<< keeps all destinations that aren't detective locations.
-//					.forEach(
-//							destination -> {
-//							 setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())// << for each destination filter out where tickets don't exist
+//						.forEach(
+//							destination ->
+//							{
+//							setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())// << for each destination filter out where tickets don't exist
 //							.stream()
 //							.filter(ticket -> player.has(ticket.requiredTicket()))
 //							.forEach(ticket -> singleMoves.add(new SingleMove(player.piece(), source, ticket.requiredTicket(), destination)));
@@ -265,7 +262,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			Set<Move> playerMoves = new HashSet<>();
 			for (Player player : allPlayers) {
 
-				for (Piece piece : remaining) {
+				for (Piece piece : remaining) { // for each remaining pieces left to move
 					if (player.piece().webColour().equals(piece.webColour())) {
 						Set<SingleMove> playerSingleMoves = makeSingleMoves(setup, detectives, player, player.location());
 						playerMoves.addAll(playerSingleMoves);
@@ -319,10 +316,10 @@ public final class MyGameStateFactory implements Factory<GameState> {
 	@Nonnull @Override public GameState build(GameSetup setup, Player mrX, ImmutableList<Player> detectives) { //, ImmutableSet<Piece> winner
 		// TODO
 		return new MyGameState(setup,
-							   ImmutableSet.of(MrX.MRX), // remaining pieces
+							   ImmutableSet.of(MrX.MRX), // MRX at the start (remaining pieces)
 							   ImmutableList.of(), 		 // log
 							   mrX,
-							   detectives); //, ImmutableSet.of(winner)
+							   detectives); // detectives
 	}
 
 
