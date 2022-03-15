@@ -117,31 +117,53 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			return ImmutableSet.copyOf(players);
 		}
 
+		private Player getPlayerFromPiece(Piece piece) {
+			return allPlayers
+					.stream()
+					.filter(player -> (player.piece() == piece))
+					.findFirst()
+					.orElse(null);
+		}
+
 		@Nonnull @Override
 		public Optional<Integer> getDetectiveLocation(Piece.Detective detective) {
-				for (Player player : detectives) {
-					if (player.piece().webColour().equals(detective.webColour())) {
-						return Optional.of(player.location());
-					}
-				}
-			return Optional.empty();
+			//				for (Player player : detectives) {
+//					if (player.piece().webColour().equals(detective.webColour())) {
+//						return Optional.of(player.location());
+//					}
+//		return Optional.empty();
+
+			Player player = getPlayerFromPiece(detective);
+			if (player == null) {return Optional.empty();}
+			else {return Optional.of(player.location());}
+
 		}
 
 		@Nonnull @Override
 		public Optional<TicketBoard> getPlayerTickets(Piece piece) {
 
 
-			for (Player player : allPlayers) {
-				if (player.piece().webColour().equals(piece.webColour())) {
-					return Optional.of(new TicketBoard() {
+//			for (Player player : allPlayers) {
+//				if (player.piece().webColour().equals(piece.webColour())) {
+//					return Optional.of(new TicketBoard() {
+//						@Override
+//						public int getCount(@Nonnull Ticket ticket) {
+//							return player.tickets().get(ticket);
+//						}
+//					});
+//				}
+//			}
+//			return Optional.empty();
+			Player player = getPlayerFromPiece(piece);
+			if (player == null) return Optional.empty();
+			else {
+				return Optional.of(new TicketBoard() {
 						@Override
 						public int getCount(@Nonnull Ticket ticket) {
 							return player.tickets().get(ticket);
 						}
-					});
-				}
+				});
 			}
-			return Optional.empty();
 		}
 
 		@Nonnull @Override
@@ -267,7 +289,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						Set<SingleMove> playerSingleMoves = makeSingleMoves(setup, detectives, player, player.location());
 						playerMoves.addAll(playerSingleMoves);
 
-						if (player.piece().isMrX() && player.has(Ticket.DOUBLE)) {
+						if (player.piece().isMrX() && player.has(Ticket.DOUBLE) && (setup.moves.size() > 1)) {
 								playerMoves.addAll(makeDoubleMoves(setup, detectives, player, playerSingleMoves));
 						}
 					}
@@ -298,18 +320,98 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				If there are no more possible detective moves, swap to Mr X's turn
 
 			 */
-			if (move.commencedBy() == mrX.piece()) {
-				Integer destination = move.accept(new Move.Visitor<>(){
-					  @Override public Integer visit(SingleMove singleMove){
+			GameState result = null;
+				result = move.accept(new Visitor<>() {
+					@Override
+					public GameState visit(SingleMove singleMove) {
+						/*
+						if mrX is moving:
+							add move to log (either hidden or reveal)
+							update remaining with all detectives.
+							take away tickets used
+						*/
+						if (move.commencedBy().equals(mrX.piece())){
+							List<Boolean> newMoves = new ArrayList<>(List.copyOf(setup.moves)); // copy of setup.moves
+							List<LogEntry> newLog =  new ArrayList<>(List.copyOf(log));	//copy of the old log
+							Set<Piece> newRemaining =  getPlayers();
+							newRemaining.remove(mrX.piece());
 
-						  return 0;
-					  }
-					  @Override public Integer visit(DoubleMove doubleMove){
-						  return 0;
-					  }
+							//handles log updating for mrx single move
+							LogEntry newEntry;
+
+							if (setup.moves.get(0)){ newEntry = LogEntry.reveal(singleMove.ticket, singleMove.destination);} // if  reveal move add revealed location to log
+							else {newEntry = LogEntry.hidden(singleMove.ticket);}	// if on hidden move add hidden entry to log
+
+							newLog.add(newEntry);
+							//handles updating newSetup.move
+							newMoves.remove(0);
+							//handles newSetup initilisation
+							GameSetup newSetup = new GameSetup(setup.graph , ImmutableList.copyOf(newMoves));
+
+							return new MyGameState(newSetup,
+									ImmutableSet.copyOf(newRemaining),
+									ImmutableList.copyOf(newLog),
+									mrX.use(singleMove.ticket),
+									detectives);
+						}
+						/*
+						if detective is moving:
+							remove this player from remaining.
+							give mr X this ticket.
+						*/
+						else{//if (!move.commencedBy().equals(mrX.piece()))
+							List<Player> newDetectives = List.copyOf(detectives);
+							newDetectives.remove(getPlayerFromPiece(move.commencedBy()));
+							Set<Piece> newRemaining =  Set.copyOf(remaining);
+							newRemaining.remove(singleMove.commencedBy());
+							if (newRemaining.size() == 0) {
+								newRemaining.add(mrX.piece());
+							}
+							Player newMrX = mrX.give(singleMove.ticket);
+
+
+							return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), log, newMrX, newDetectives);
+						}
+
+					}
+
+					@Override
+					public GameState visit(DoubleMove doubleMove) {
+						/*
+						add log entry of first destination
+						add log entry of second destination
+						take away the tickets from mr X.
+						update remaining with all detectives.
+						 */
+						List<Boolean> newMoves = new ArrayList<>(List.copyOf(setup.moves));
+						List<LogEntry> newLog = new ArrayList<>(List.copyOf(log));
+
+						if (newMoves.get(0)) {
+							newLog.add(LogEntry.reveal(doubleMove.ticket1, doubleMove.destination1));
+						}
+						else {newLog.add(LogEntry.hidden(doubleMove.ticket1));}
+						newMoves.remove(0);
+
+						if (newMoves.get(0)) {
+							newLog.add(LogEntry.reveal(doubleMove.ticket2, doubleMove.destination2));
+						}
+						else {newLog.add(LogEntry.hidden(doubleMove.ticket2));}
+						newMoves.remove(0);
+
+						return new MyGameState(new GameSetup(
+								setup.graph, ImmutableList.copyOf(newMoves)), //setup
+								getPlayers(), //remaining
+								ImmutableList.copyOf(newLog), //log
+								mrX
+										.use(ImmutableList.of(doubleMove.ticket1, doubleMove.ticket2, Ticket.DOUBLE))
+										.at(doubleMove.destination2), //mrX
+								detectives); // detectives
+
+					}
 				});
-			}
-			return null;
+
+
+			return result;
 		}
 	}
 
