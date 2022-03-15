@@ -163,9 +163,9 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			Set<DoubleMove> doubleMoves = new HashSet<>();
 
 			//create a list of detective locations.
-			List<Integer> detLocations = new ArrayList<>();
+			List<Integer> otherDetLocations = new ArrayList<>();
 			for(Player det : detectives) {
-				detLocations.add(det.location());
+				otherDetLocations.add(det.location());
 			}
 			//for all possible single moves,
 			for (SingleMove singleMove : singleMoves) {
@@ -174,7 +174,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				//go through all possible journeys from each single move's destination,
 				for (int destination2 : setup.graph.adjacentNodes(destination)) {
 					//  if the location is occupied, don't add to the collection of moves to return
-					if (!detLocations.contains(destination2)) {
+					if (!otherDetLocations.contains(destination2)) {
 						//go through all the possible tickets between the single move destination and its next destination.
 						for (Transport t : Objects.requireNonNull(setup.graph.edgeValueOrDefault(destination, destination2, ImmutableSet.of()))) {
 
@@ -211,17 +211,17 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			Set<SingleMove> singleMoves = new HashSet<>();
 
 			// create a list of locations of the other detectives.
-			List<Player> otherDet = new ArrayList<>(detectives);
-			otherDet.remove(player);
-			List<Integer> detLocations = new ArrayList<>();
-			for(Player det : otherDet) {
-				detLocations.add(det.location());
-			}
-			//go through all the possible journey's from the source (player location)
+			List<Player> otherDets = new ArrayList<>(detectives);
+			otherDets.remove(player);
+
+			List<Integer> otherDetLocations = new ArrayList<>();
+			otherDets.forEach(x -> otherDetLocations.add(x.location())); //finds all the locations of the other players
+			
+			//go through all the possible journeys (single moves) from the source (player location)
 			for(int destination : setup.graph.adjacentNodes(source)) {
 				// find out if destination is occupied by a detective
 				//  if the location is occupied, don't add to the collection of moves to return
-				if (!detLocations.contains(destination)) {
+				if (!otherDetLocations.contains(destination)) {
 					for (Transport t : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()))) {
 						// find out if the player has the required tickets
 						// if it does, construct a SingleMove and add it the collection of moves to return
