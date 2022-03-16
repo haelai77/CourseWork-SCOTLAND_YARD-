@@ -38,7 +38,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		private ImmutableSet<Piece> winner;   // Current Winner(s)
 		//-------------------------------------------------------
 		private ImmutableList<LogEntry> log;  // Mr. x's move log
-		private ImmutableSet<Move> moves;	  // Holds the current possible moves
+		private ImmutableSet<Move> moves;	  // Holds the current possible moves TODO ASK ABOUT THIS IN THE LAB
 		//--------------------------------------------------------------------------------------------------------------
 
 //		private static void verifyNotNull(Collection maybeNull, String var){
@@ -277,20 +277,18 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull @Override
 		public ImmutableSet<Move> getAvailableMoves() {
 			Set<Move> playerMoves = new HashSet<>();
-			for (Player player : allPlayers) {
 
-				for (Piece piece : remaining) { // for each remaining pieces left to move
-					if (player.piece().webColour().equals(piece.webColour())) {
-						Set<SingleMove> playerSingleMoves = makeSingleMoves(setup, detectives, player, player.location());
-						playerMoves.addAll(playerSingleMoves);
+			for (Piece piece : remaining) { // for each remaining pieces left to move
+				Player player = getPlayerFromPiece(piece);
+				Set<SingleMove> playerSingleMoves = makeSingleMoves(setup, detectives, player, player.location());
+				playerMoves.addAll(playerSingleMoves);
 
-						if (player.piece().isMrX() && player.has(Ticket.DOUBLE) && (setup.moves.size() > 1)) {
-								playerMoves.addAll(makeDoubleMoves(setup, detectives, player, playerSingleMoves));
-						}
-					}
-
+				if (player.piece().isMrX() && player.has(Ticket.DOUBLE) && (setup.moves.size() > 1)) {
+					playerMoves.addAll(makeDoubleMoves(setup, detectives, player, playerSingleMoves));
 				}
+
 			}
+
 			return ImmutableSet.copyOf(playerMoves);
 
 		}
@@ -340,14 +338,17 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							newLog.add(newEntry);
 							//System.out.println("log updated for mrX single Move");
 							//handles updating newSetup.move
-							newMoves.remove(0);
+							if (newMoves.size() > 1) {
+								newMoves.remove(0);//WARNING WARNING THIS DOESN'T GET REMOVED ON THE LAST MOVE !!!!!! BAD BAD ED SMH
+							}
 							//handles newSetup initialization
 							GameSetup newSetup = new GameSetup(setup.graph , ImmutableList.copyOf(newMoves));
 
 							return new MyGameState(newSetup,
 									ImmutableSet.copyOf(detectivePieces),
 									ImmutableList.copyOf(newLog),
-									mrX.use(singleMove.ticket),
+									mrX.use(singleMove.ticket)
+											.at(singleMove.destination),
 									detectives);
 						}
 						/*
@@ -356,17 +357,27 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							give mr X this ticket.
 						*/
 						else{//if (!move.commencedBy().equals(mrX.piece()))
-//							List<Player> newDetectives = List.copyOf(detectives);
-//							newDetectives.remove(getPlayerFromPiece(move.commencedBy()));
+
+							List<Player> newDetectives = new ArrayList<>(List.copyOf(detectives));
+
+							newDetectives.remove(getPlayerFromPiece(move.commencedBy()));
+							Player newDetective = getPlayerFromPiece(singleMove.commencedBy()).at(singleMove.destination).use(singleMove.ticket);
+							newDetectives.add(newDetective);
+
+
 							Set<Piece> newRemaining = new HashSet<>(Set.copyOf(remaining));
 							newRemaining.remove(singleMove.commencedBy());
-							if (newRemaining.size() == 0) {
+							if (newRemaining.isEmpty()) {
 								newRemaining.add(mrX.piece());
 							}
-							Player newMrX = mrX.give(singleMove.ticket);
 
 
-							return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), log, newMrX, detectives);
+//							Player
+							return new MyGameState(setup,
+													ImmutableSet.copyOf(newRemaining),
+													log,
+													mrX.give(singleMove.ticket),
+													newDetectives);
 						}
 
 					}
@@ -386,15 +397,21 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							newLog.add(LogEntry.reveal(doubleMove.ticket1, doubleMove.destination1));
 						}
 						else {newLog.add(LogEntry.hidden(doubleMove.ticket1));}
-						newMoves.remove(0);
+						if (newMoves.size() > 1) {
+							newMoves.remove(0);
+						}
 
 						if (newMoves.get(0)) {
 							newLog.add(LogEntry.reveal(doubleMove.ticket2, doubleMove.destination2));
 						}
 						else {newLog.add(LogEntry.hidden(doubleMove.ticket2));}
-						newMoves.remove(0);
+						if (newMoves.size() > 1) {
+							newMoves.remove(0);
+						}
 
 						Set<Piece> detectivePieces = detectives.stream().map(Player::piece).collect(Collectors.toSet());
+						//Set<Piece> detectivePieces = new HashSet<>(Set.copyOf(detectives));
+
 
 						return new MyGameState(new GameSetup(
 								setup.graph, ImmutableList.copyOf(newMoves)), //setup
