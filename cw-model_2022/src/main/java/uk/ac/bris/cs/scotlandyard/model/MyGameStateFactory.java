@@ -109,11 +109,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull @Override //TODO //DONE
 		public ImmutableSet<Piece> getPlayers() { // returns all player pieces
 
-			Set<Piece> players = new HashSet<>();
-
-			for (Player player : allPlayers) {
-				players.add(player.piece());
-			}
+			Set<Piece> players = allPlayers.stream().map(Player::piece).collect(Collectors.toSet());//new HashSet<>();
 
 			return ImmutableSet.copyOf(players);
 		}
@@ -183,10 +179,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			Set<DoubleMove> doubleMoves = new HashSet<>();
 
 			//create a list of detective locations.
-			List<Integer> otherDetLocations = new ArrayList<>();
-			for(Player det : detectives) {
-				otherDetLocations.add(det.location());
-			}
+			List<Integer> otherDetLocations = detectives.stream().map(Player::location).toList();
+
 			//for all possible single moves,
 			for (SingleMove singleMove : singleMoves) {
 				int source = singleMove.source();
@@ -304,7 +298,9 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 		@Nonnull @Override //from interface GameState //TODO
 		public GameState advance(Move move) {
-			if(!getAvailableMoves().contains(move)) throw new IllegalArgumentException("Illegal move: "+move);
+			getAvailableMoves().forEach(System.out::println);
+			System.out.println("------------------");
+			if(!getAvailableMoves().contains(move)) throw new IllegalArgumentException("Illegal move: " + move);
 			/*TODO:
 			 If it's Mr X's turn (which can be checked using move.commencedBy):
 				Add their move(s) to the log
@@ -342,6 +338,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							else {newEntry = LogEntry.hidden(singleMove.ticket);}	// if on hidden move add hidden entry to log
 
 							newLog.add(newEntry);
+							//System.out.println("log updated for mrX single Move");
 							//handles updating newSetup.move
 							newMoves.remove(0);
 							//handles newSetup initialization
