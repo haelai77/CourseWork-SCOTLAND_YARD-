@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.channels.GatheringByteChannel;
 import java.security.KeyStore;
 import java.util.*;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 
 import com.google.common.graph.ImmutableValueGraph;
@@ -301,8 +302,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		}
 
 
-
-
 		@Nonnull @Override //from interface GameState //TODO
 		public GameState advance(Move move) {
 			if(!getAvailableMoves().contains(move)) throw new IllegalArgumentException("Illegal move: "+move);
@@ -333,8 +332,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						if (move.commencedBy().equals(mrX.piece())){
 							List<Boolean> newMoves = new ArrayList<>(List.copyOf(setup.moves)); // copy of setup.moves
 							List<LogEntry> newLog =  new ArrayList<>(List.copyOf(log));	//copy of the old log
-							Set<Piece> newRemaining =  getPlayers();
-							newRemaining.remove(mrX.piece());
+
+							Set<Piece> detectivePieces = detectives.stream().map(Player::piece).collect(Collectors.toSet());
 
 							//handles log updating for mrx single move
 							LogEntry newEntry;
@@ -345,11 +344,11 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							newLog.add(newEntry);
 							//handles updating newSetup.move
 							newMoves.remove(0);
-							//handles newSetup initilisation
+							//handles newSetup initialization
 							GameSetup newSetup = new GameSetup(setup.graph , ImmutableList.copyOf(newMoves));
 
 							return new MyGameState(newSetup,
-									ImmutableSet.copyOf(newRemaining),
+									ImmutableSet.copyOf(detectivePieces),
 									ImmutableList.copyOf(newLog),
 									mrX.use(singleMove.ticket),
 									detectives);
@@ -360,9 +359,9 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							give mr X this ticket.
 						*/
 						else{//if (!move.commencedBy().equals(mrX.piece()))
-							List<Player> newDetectives = List.copyOf(detectives);
-							newDetectives.remove(getPlayerFromPiece(move.commencedBy()));
-							Set<Piece> newRemaining =  Set.copyOf(remaining);
+//							List<Player> newDetectives = List.copyOf(detectives);
+//							newDetectives.remove(getPlayerFromPiece(move.commencedBy()));
+							Set<Piece> newRemaining = new HashSet<>(Set.copyOf(remaining));
 							newRemaining.remove(singleMove.commencedBy());
 							if (newRemaining.size() == 0) {
 								newRemaining.add(mrX.piece());
@@ -370,7 +369,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							Player newMrX = mrX.give(singleMove.ticket);
 
 
-							return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), log, newMrX, newDetectives);
+							return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), log, newMrX, detectives);
 						}
 
 					}
@@ -398,9 +397,11 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						else {newLog.add(LogEntry.hidden(doubleMove.ticket2));}
 						newMoves.remove(0);
 
+						Set<Piece> detectivePieces = detectives.stream().map(Player::piece).collect(Collectors.toSet());
+
 						return new MyGameState(new GameSetup(
 								setup.graph, ImmutableList.copyOf(newMoves)), //setup
-								getPlayers(), //remaining
+								ImmutableSet.copyOf(detectivePieces), //remaining
 								ImmutableList.copyOf(newLog), //log
 								mrX
 										.use(ImmutableList.of(doubleMove.ticket1, doubleMove.ticket2, Ticket.DOUBLE))
@@ -409,7 +410,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 					}
 				});
-
 
 			return result;
 		}
