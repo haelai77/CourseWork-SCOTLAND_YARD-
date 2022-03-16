@@ -25,14 +25,16 @@ import static java.util.stream.Collectors.toList;
  * Stage 1: Complete this class
  */
 public final class MyGameStateFactory implements Factory<GameState> {
+
+
 	
 	private final class MyGameState implements GameState{
-
 		private GameSetup setup; 			  // Thing to return
 		//-------------------------------------------------------
 		private Player mrX;		 			  // Holds Mr. x
 		private List<Player> detectives;      // Detectives
 		private List<Player> allPlayers;	  // Holds Mr.X and detectives
+
 		//-------------------------------------------------------
 		private ImmutableSet<Piece> remaining;// Pieces remaining
 		private ImmutableSet<Piece> winner;   // Current Winner(s)
@@ -72,7 +74,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.allPlayers = new ArrayList<>(detectives);
 			allPlayers.add(mrX);
 
-
 			if (setup.moves.isEmpty()){ throw new IllegalArgumentException("moves are empty");}
 			if (setup.graph == null){ throw new IllegalArgumentException(("graph is null"));}
 			if ((setup.graph.nodes()).size() == 0 ) { throw new IllegalArgumentException("graph is empty");}
@@ -109,7 +110,10 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull @Override //TODO //DONE
 		public ImmutableSet<Piece> getPlayers() { // returns all player pieces
 
-			Set<Piece> players = allPlayers.stream().map(Player::piece).collect(Collectors.toSet());//new HashSet<>();
+			Set<Piece> players = allPlayers
+					.stream()
+					.map(Player::piece)
+					.collect(Collectors.toSet());//new HashSet<>();
 
 			return ImmutableSet.copyOf(players);
 		}
@@ -170,7 +174,21 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 		@Nonnull @Override
 		public ImmutableSet<Piece> getWinner() {
-			return winner;
+
+			if (detectives.stream().map(Player::location).anyMatch( x -> x == mrX.location())//if any of the locations of detectives are the same as mister x
+					|| (makeSingleMoves(setup, detectives, mrX, mrX.location()).size() == 0)){	//if mr.X has no more space to go to
+				return ImmutableSet.copyOf(detectives.stream().map(Player::piece).collect(Collectors.toSet())); //return set of detective pieces
+			}
+
+//			if (finalRound == 2) {	// if setup.move size is 1 and only mrx is in remaining	  //(setup.moves.size() == 1) && (remaining.size() == 1) && (remaining.contains(mrX.piece()))
+//					//|| (detectives.stream().map( detective -> makeSingleMoves((detective))))
+//				if (detectives.stream().map(Player::location).noneMatch( x -> x == mrX.location())	//if any player's location matches mrX's
+//						){
+//					return ImmutableSet.of(mrX.piece());
+//				}
+//
+//			}
+			return ImmutableSet.of();
 		}
 
 		// HELPER METHOD: given a player, its location, and a set of all possible SingleMoves it can make, output a set of all possible DoubleMoves it can make.
@@ -273,10 +291,12 @@ public final class MyGameStateFactory implements Factory<GameState> {
 //			return singleMoves;
 		}
 
-
 		@Nonnull @Override
 		public ImmutableSet<Move> getAvailableMoves() {
 			Set<Move> playerMoves = new HashSet<>();
+			if (!winner.isEmpty()) {
+				return ImmutableSet.of();
+			}
 
 			for (Piece piece : remaining) { // for each remaining pieces left to move
 				Player player = getPlayerFromPiece(piece);
@@ -293,11 +313,10 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 		}
 
-
 		@Nonnull @Override //from interface GameState //TODO
 		public GameState advance(Move move) {
-			getAvailableMoves().forEach(System.out::println);
-			System.out.println("------------------");
+//			getAvailableMoves().forEach(System.out::println);
+//			System.out.println("------------------");
 			if(!getAvailableMoves().contains(move)) throw new IllegalArgumentException("Illegal move: " + move);
 			/*TODO:
 			 If it's Mr X's turn (which can be checked using move.commencedBy):
@@ -324,6 +343,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							take away tickets used
 						*/
 						if (move.commencedBy().equals(mrX.piece())){
+
 							List<Boolean> newMoves = new ArrayList<>(List.copyOf(setup.moves)); // copy of setup.moves
 							List<LogEntry> newLog =  new ArrayList<>(List.copyOf(log));	//copy of the old log
 
@@ -338,9 +358,13 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							newLog.add(newEntry);
 							//System.out.println("log updated for mrX single Move");
 							//handles updating newSetup.move
+							//------------------------------------TESTING
+
 							if (newMoves.size() > 1) {
 								newMoves.remove(0);//WARNING WARNING THIS DOESN'T GET REMOVED ON THE LAST MOVE !!!!!! BAD BAD ED SMH
 							}
+
+							//------------------------------------
 							//handles newSetup initialization
 							GameSetup newSetup = new GameSetup(setup.graph , ImmutableList.copyOf(newMoves));
 
@@ -408,6 +432,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						if (newMoves.size() > 1) {
 							newMoves.remove(0);
 						}
+
 
 						Set<Piece> detectivePieces = detectives.stream().map(Player::piece).collect(Collectors.toSet());
 						//Set<Piece> detectivePieces = new HashSet<>(Set.copyOf(detectives));
