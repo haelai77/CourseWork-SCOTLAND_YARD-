@@ -180,14 +180,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				return ImmutableSet.copyOf(detectives.stream().map(Player::piece).collect(Collectors.toSet())); //return set of detective pieces
 			}
 
-//			if (finalRound == 2) {	// if setup.move size is 1 and only mrx is in remaining	  //(setup.moves.size() == 1) && (remaining.size() == 1) && (remaining.contains(mrX.piece()))
-//					//|| (detectives.stream().map( detective -> makeSingleMoves((detective))))
-//				if (detectives.stream().map(Player::location).noneMatch( x -> x == mrX.location())	//if any player's location matches mrX's
-//						){
-//					return ImmutableSet.of(mrX.piece());
-//				}
-//
-//			}
+
 			return ImmutableSet.of();
 		}
 
