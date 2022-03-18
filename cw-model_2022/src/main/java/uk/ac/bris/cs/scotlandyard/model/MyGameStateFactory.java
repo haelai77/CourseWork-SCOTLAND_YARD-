@@ -187,7 +187,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 //					|| (remaining.contains(mrX.piece()) && getAvailableMoves().isEmpty())
 			){
 				winner = detectives.stream().map(Player::piece).collect(Collectors.toSet());
-				System.out.println("det win :" + remaining);
+
 				return ImmutableSet.copyOf(detectives.stream().map(Player::piece).collect(Collectors.toSet())); //return set of detective pieces
 			}
 			//if mrx wins
@@ -197,14 +197,10 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			)
 			{
-				System.out.println("x Win :" + remaining);
 				winner = Set.of(mrX.piece());
 				return ImmutableSet.of(mrX.piece());
 			}
 
-			System.out.println("no weinners");
-			System.out.println(remaining);
-			System.out.println(getAvailableMoves());
 			return ImmutableSet.of();
 		}
 
@@ -339,7 +335,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull @Override //from interface GameState //TODO
 		public GameState advance(Move move) {
 //			getAvailableMoves().forEach(System.out::println);
-//			System.out.println("------------------");				i
+//			System.out.println("------------------");				i		sout
+
 			if(!getAvailableMoves().contains(move)) throw new IllegalArgumentException("Illegal move: " + move);
 			/*TODO:
 			 If it's Mr X's turn (which can be checked using move.commencedBy):
@@ -490,8 +487,4 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							   mrX,
 							   detectives); // detectives
 	}
-
-
-
-
 }
