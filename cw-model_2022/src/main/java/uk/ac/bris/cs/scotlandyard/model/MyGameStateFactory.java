@@ -37,7 +37,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 		//-------------------------------------------------------
 		private ImmutableSet<Piece> remaining;// Pieces remaining
-		private ImmutableSet<Piece> winner;   // Current Winner(s)
+		private Set<Piece> winner;   // Current Winner(s) (was once immutable idk if this a good thing)
 		//-------------------------------------------------------
 		private ImmutableList<LogEntry> log;  // Mr. x's move log
 		private ImmutableSet<Move> moves;	  // Holds the current possible moves TODO ASK ABOUT THIS IN THE LAB
@@ -74,7 +74,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.allPlayers = new ArrayList<>(detectives);
 			allPlayers.add(mrX);
 
-			if (setup.moves.isEmpty()){ throw new IllegalArgumentException("moves are empty");}
+			if (setup.moves.isEmpty()){
+				throw new IllegalArgumentException("moves are empty");}
 			if (setup.graph == null){ throw new IllegalArgumentException(("graph is null"));}
 			if ((setup.graph.nodes()).size() == 0 ) { throw new IllegalArgumentException("graph is empty");}
 
@@ -97,7 +98,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				if (!(player.tickets().get(Ticket.SECRET) == 0)) { throw new IllegalArgumentException("detective has SECRET ticket");}
 				for (Player otherPlayers : others){
 					if (player.location() == otherPlayers.location()){ throw new IllegalArgumentException("detective Locations overlap");}
-					if (player.location() == mrX.location()) {throw new IllegalArgumentException("detective and mrx locations overlap");}
+					//if (player.location() == mrX.location()) {throw new IllegalArgumentException("detective and mrx locations overlap");}
 				}
 			}
 		}
@@ -174,10 +175,28 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 		@Nonnull @Override
 		public ImmutableSet<Piece> getWinner() {
-
+			if (!winner.isEmpty()) {
+				return ImmutableSet.copyOf(winner);
+			}
+			//if detectives win
 			if (detectives.stream().map(Player::location).anyMatch( x -> x == mrX.location())//if any of the locations of detectives are the same as mister x
-					|| (makeSingleMoves(setup, detectives, mrX, mrX.location()).size() == 0)){	//if mr.X has no more space to go to
+//					|| (makeSingleMoves(setup, detectives, mrX, mrX.location()).size() == 0)){	//if mr.X has no more space to go to
+					|| (getAvailableMovesGeneric(ImmutableSet.of(mrX.piece())).isEmpty() && remaining.contains(mrX.piece())) // if mister x's turn, and he can't move
+//					|| ((detectives.stream().map(Player::location).collect(Collectors.toSet()).containsAll(setup.graph.adjacentNodes(mrX.location())))) // if mrx adjacent nodes is a subset of detective locations (mrx surrounded)
+//					|| (remaining.contains(mrX.piece()) && getAvailableMoves().isEmpty())
+			){
+				winner = detectives.stream().map(Player::piece).collect(Collectors.toSet());
+				System.out.println("det win :" + remaining);
 				return ImmutableSet.copyOf(detectives.stream().map(Player::piece).collect(Collectors.toSet())); //return set of detective pieces
+			}
+			//if mrx wins
+			else if (getAvailableMovesGeneric(detectives.stream().map(Player::piece).collect(Collectors.toSet())).isEmpty() //if at anypoint all the detectives can't move
+//				|| (detectives.stream().map(detective -> detective.tickets().values().stream().mapToInt(Integer::intValue).sum()).reduce(0, Integer::sum) == 0)
+			)
+			{
+				System.out.println("x Win :" + remaining);
+				winner = Set.of(mrX.piece());
+				return ImmutableSet.of(mrX.piece());
 			}
 
 
@@ -284,14 +303,15 @@ public final class MyGameStateFactory implements Factory<GameState> {
 //			return singleMoves;
 		}
 
-		@Nonnull @Override
-		public ImmutableSet<Move> getAvailableMoves() {
+		@Nonnull
+		public ImmutableSet<Move> getAvailableMovesGeneric(Set<Piece> pieces){
+
 			Set<Move> playerMoves = new HashSet<>();
 			if (!winner.isEmpty()) {
 				return ImmutableSet.of();
 			}
 
-			for (Piece piece : remaining) { // for each remaining pieces left to move
+			for (Piece piece : pieces) { // for each remaining pieces left to move
 				Player player = getPlayerFromPiece(piece);
 				Set<SingleMove> playerSingleMoves = makeSingleMoves(setup, detectives, player, player.location());
 				playerMoves.addAll(playerSingleMoves);
@@ -306,10 +326,15 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 		}
 
+		@Nonnull @Override
+		public ImmutableSet<Move> getAvailableMoves(){
+			return getAvailableMovesGeneric(remaining);
+		}
+
 		@Nonnull @Override //from interface GameState //TODO
 		public GameState advance(Move move) {
 //			getAvailableMoves().forEach(System.out::println);
-//			System.out.println("------------------");
+//			System.out.println("------------------");				i
 			if(!getAvailableMoves().contains(move)) throw new IllegalArgumentException("Illegal move: " + move);
 			/*TODO:
 			 If it's Mr X's turn (which can be checked using move.commencedBy):
@@ -383,10 +408,12 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 
 							Set<Piece> newRemaining = new HashSet<>(Set.copyOf(remaining));
-							newRemaining.remove(singleMove.commencedBy());
-							if (newRemaining.isEmpty()) {
-								newRemaining.add(mrX.piece());
-							}
+
+								newRemaining.remove(singleMove.commencedBy());
+								if (newRemaining.isEmpty()) {
+									newRemaining.add(mrX.piece());
+								}
+
 
 
 //							Player
