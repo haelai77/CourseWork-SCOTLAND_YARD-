@@ -375,7 +375,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 							//handles log updating for mrx single move
 							LogEntry newEntry;
-							if (setup.moves.get(newLog.size())) {
+							if (setup.moves.get(log.size())) {
 								newEntry = LogEntry.reveal(singleMove.ticket, singleMove.destination);
 							}
 							else {
@@ -448,7 +448,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						List<Boolean> newMoves = new ArrayList<>(List.copyOf(setup.moves));
 						List<LogEntry> newLog = new ArrayList<>(List.copyOf(log));
 
-						if (newMoves.get(newLog.size())) {
+						if (newMoves.get(log.size())) {
 							newLog.add(LogEntry.reveal(doubleMove.ticket1, doubleMove.destination1));
 						}
 						else {newLog.add(LogEntry.hidden(doubleMove.ticket1));}
