@@ -191,8 +191,10 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				return ImmutableSet.copyOf(detectives.stream().map(Player::piece).collect(Collectors.toSet())); //return set of detective pieces
 			}
 			//if mrx wins
-			else if (getAvailableMovesGeneric(detectives.stream().map(Player::piece).collect(Collectors.toSet())).isEmpty() //if at anypoint all the detectives can't move
+			else if (getAvailableMovesGeneric(detectives.stream().map(Player::piece).collect(Collectors.toSet())).isEmpty()//if at anypoint all the detectives can't move
 //				|| (detectives.stream().map(detective -> detective.tickets().values().stream().mapToInt(Integer::intValue).sum()).reduce(0, Integer::sum) == 0)
+				|| ((setup.moves.size() == log.size() && remaining.contains(mrX.piece())))
+
 			)
 			{
 				System.out.println("x Win :" + remaining);
@@ -370,20 +372,26 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 							Set<Piece> detectivePieces = detectives.stream().map(Player::piece).collect(Collectors.toSet());
 
+
 							//handles log updating for mrx single move
 							LogEntry newEntry;
-
-							if (setup.moves.get(0)){ newEntry = LogEntry.reveal(singleMove.ticket, singleMove.destination);} // if  reveal move add revealed location to log
-							else {newEntry = LogEntry.hidden(singleMove.ticket);}	// if on hidden move add hidden entry to log
+							if (setup.moves.get(newLog.size())) {
+								newEntry = LogEntry.reveal(singleMove.ticket, singleMove.destination);
+							}
+							else {
+								newEntry = LogEntry.hidden(singleMove.ticket);
+							}	// if on hidden move add hidden entry to log
 
 							newLog.add(newEntry);
+
+
 							//System.out.println("log updated for mrX single Move");
 							//handles updating newSetup.move
 							//------------------------------------TESTING
 
-							if (newMoves.size() > 1) {
-								newMoves.remove(0);//WARNING WARNING THIS DOESN'T GET REMOVED ON THE LAST MOVE !!!!!! BAD BAD ED SMH
-							}
+//							if (newMoves.size() > 1) {
+//								newMoves.remove(0);//WARNING WARNING THIS DOESN'T GET REMOVED ON THE LAST MOVE !!!!!! BAD BAD ED SMH
+//							}
 
 							//------------------------------------
 							//handles newSetup initialization
@@ -440,20 +448,17 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						List<Boolean> newMoves = new ArrayList<>(List.copyOf(setup.moves));
 						List<LogEntry> newLog = new ArrayList<>(List.copyOf(log));
 
-						if (newMoves.get(0)) {
+						if (newMoves.get(newLog.size())) {
 							newLog.add(LogEntry.reveal(doubleMove.ticket1, doubleMove.destination1));
 						}
 						else {newLog.add(LogEntry.hidden(doubleMove.ticket1));}
-						if (newMoves.size() > 1) {
-							newMoves.remove(0);
-						}
 
-						if (newMoves.get(0)) {
+
+						if (newMoves.get(newLog.size())) {
 							newLog.add(LogEntry.reveal(doubleMove.ticket2, doubleMove.destination2));
 						}
-						else {newLog.add(LogEntry.hidden(doubleMove.ticket2));}
-						if (newMoves.size() > 1) {
-							newMoves.remove(0);
+						else {
+							newLog.add(LogEntry.hidden(doubleMove.ticket2));
 						}
 
 
