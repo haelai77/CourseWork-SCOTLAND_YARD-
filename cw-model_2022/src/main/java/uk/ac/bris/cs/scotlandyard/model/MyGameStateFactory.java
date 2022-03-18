@@ -178,6 +178,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			if (!winner.isEmpty()) {
 				return ImmutableSet.copyOf(winner);
 			}
+
 			//if detectives win
 			if (detectives.stream().map(Player::location).anyMatch( x -> x == mrX.location())//if any of the locations of detectives are the same as mister x
 //					|| (makeSingleMoves(setup, detectives, mrX, mrX.location()).size() == 0)){	//if mr.X has no more space to go to
@@ -199,7 +200,9 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				return ImmutableSet.of(mrX.piece());
 			}
 
-
+			System.out.println("no weinners");
+			System.out.println(remaining);
+			System.out.println(getAvailableMoves());
 			return ImmutableSet.of();
 		}
 
@@ -305,11 +308,11 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 		@Nonnull
 		public ImmutableSet<Move> getAvailableMovesGeneric(Set<Piece> pieces){
-
-			Set<Move> playerMoves = new HashSet<>();
 			if (!winner.isEmpty()) {
 				return ImmutableSet.of();
 			}
+			Set<Move> playerMoves = new HashSet<>();
+
 
 			for (Piece piece : pieces) { // for each remaining pieces left to move
 				Player player = getPlayerFromPiece(piece);
@@ -389,8 +392,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							return new MyGameState(newSetup,
 									ImmutableSet.copyOf(detectivePieces),
 									ImmutableList.copyOf(newLog),
-									mrX.use(singleMove.ticket)
-											.at(singleMove.destination),
+									mrX.use(singleMove.ticket).at(singleMove.destination),
 									detectives);
 						}
 						/*
@@ -410,11 +412,12 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							Set<Piece> newRemaining = new HashSet<>(Set.copyOf(remaining));
 
 								newRemaining.remove(singleMove.commencedBy());
+
+								newRemaining.removeAll(remaining.stream().filter(piece -> getAvailableMovesGeneric(ImmutableSet.of(piece)).isEmpty()).collect(Collectors.toSet()));
+
 								if (newRemaining.isEmpty()) {
 									newRemaining.add(mrX.piece());
 								}
-
-
 
 //							Player
 							return new MyGameState(setup,
