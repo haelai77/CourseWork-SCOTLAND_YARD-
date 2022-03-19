@@ -18,7 +18,7 @@ public final class MyModelFactory implements Factory<Model> {
 		// TODO
 	return new Model()
 	{
-		HashSet<Observer> observers = new HashSet<>();
+		final HashSet<Observer> observers = new HashSet<>();
 		Board.GameState state = new MyGameStateFactory().build(setup, mrX, detectives);
 
 
@@ -34,7 +34,7 @@ public final class MyModelFactory implements Factory<Model> {
 				throw new IllegalArgumentException("the observer is null");
 			}
 			if (observers.contains(observer)) {
-				throw new IllegalArgumentException("observer can't be added twice");
+				throw new IllegalArgumentException("registered observer can't be registered");
 			}
 			observers.add(observer);
 		}
@@ -45,7 +45,7 @@ public final class MyModelFactory implements Factory<Model> {
 				throw new IllegalArgumentException("the observer is null");
 			}
 			if (!observers.contains(observer)) {
-				throw new IllegalArgumentException("can't unregister observer not in observers");
+				throw new IllegalArgumentException("can't unregister unregistered observer");
 			}
 			observers.remove(observer);
 		}
@@ -60,18 +60,10 @@ public final class MyModelFactory implements Factory<Model> {
 		public void chooseMove(@Nonnull Move move){
 			state = state.advance(move);
 			if (state.getWinner().isEmpty()) {
-				for (Observer observer : observers) {
-					observer.onModelChanged(state, Observer.Event.MOVE_MADE);
-				}
-				System.out.println("winners:" + state.getWinner());
+				observers.forEach(observer -> observer.onModelChanged(state, Observer.Event.MOVE_MADE));
 			}
 			else {
-
-				for (Observer observer : observers) {
-					observer.onModelChanged(state, Observer.Event.GAME_OVER);
-				}
-				System.out.println("winners:" + state.getWinner());
-
+				observers.forEach(observer -> observer.onModelChanged(state, Observer.Event.GAME_OVER));
 			}
 		}
 	};
