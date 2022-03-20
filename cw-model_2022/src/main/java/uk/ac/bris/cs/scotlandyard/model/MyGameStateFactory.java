@@ -1,14 +1,18 @@
 package uk.ac.bris.cs.scotlandyard.model;
 
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import java.io.IOException;
 import java.nio.channels.GatheringByteChannel;
+import java.nio.channels.IllegalChannelGroupException;
 import java.security.KeyStore;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.Immutable;
 
 import com.google.common.graph.ImmutableValueGraph;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
@@ -29,106 +33,104 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 	
 	private final class MyGameState implements GameState{
-		private GameSetup setup; 			  // Thing to return
-		//-------------------------------------------------------
-		private Player mrX;		 			  // Holds Mr. x
-		private List<Player> detectives;      // Detectives
-		private List<Player> allPlayers;	  // Holds Mr.X and detectives
-		private ImmutableSet<Piece> detectivePieces;
+		//ATTRIBUTES
+		private final GameSetup setup;
+		//------------------------------------------------------- COLLECTIONS AND MRX ATTRIBUTE
 
-		//-------------------------------------------------------
-		private ImmutableSet<Piece> remaining;// Pieces remaining
-		private ImmutableSet<Piece> winner;   // Current Winner(s) (was once immutable idk if this a good thing)
-		//-------------------------------------------------------
-		private ImmutableList<LogEntry> log;  // Mr. x's move log
-		private ImmutableSet<Move> moves;	  // Holds the current possible moves TODO ASK ABOUT THIS IN THE LAB
+		private final Player mrX;		 			  // The Player of mrX
+		private final List<Player> detectives;        // Detectives Players
+		private final List<Player> allPlayers;		  // list of detectives and mrX
+
+		//------------------------------------------------------- IMMUTABLES
+
+		private ImmutableSet<Piece> winner;   		 	   //
+		private final ImmutableList<LogEntry> log;   	   // Log of Mr.x moves
+		private final ImmutableSet<Piece> remaining; 	   // Pieces remaining to move for a round
+		private final ImmutableSet<Piece> detectivePieces; // Detective Pieces
+
+		//-------------------------------------------------------------------------------------------------------------- CHECKS FOR NULL OR EMPTINESS
+
+		private static <T> void verifyNotNullOrEmpty(T element, String message){ //function for checking whether initialised fields are null or empty
+			if (element == null){					 	// throws exception if argument is null
+				throw new IllegalArgumentException(String.format("%s", message));
+			}
+			else if (element instanceof Integer){	//checks if graph is empty
+				if (message.contains("graph") && ((Integer)element == 0)){throw new IllegalArgumentException(String.format("%s", message));}
+			}
+			else if (element instanceof Collection){	// throws exception if collection is empty
+				if (((Collection<?>) element).isEmpty()){throw new IllegalArgumentException(String.format("%s", message));}
+			}
+		}
+
 		//--------------------------------------------------------------------------------------------------------------
-
-//		private static void verifyNotNull(Collection maybeNull, String var){
-//			//if (maybeNull == null)  { throw new NullPointerException(String.format("%s", var)); }
-//			if (maybeNull.isEmpty()){ throw new IllegalArgumentException(String.format("%s v1", var)); }
-//		}
-//		private static void verifyNotNull(Object maybeNull, String var){
-//			if (maybeNull == null){ throw new IllegalArgumentException(String.format("%s v2", var)); }
-//		}
-//		private static void verifyGraphSupplied(GameState setup) throws IOException {
-//			if (!(setup.getSetup().graph.equals(ScotlandYard.standardGraph()))){
-//				throw new IllegalArgumentException("Graph is not standard");
-//			}
-//		}
-
+		//CONSTRUCTOR FOR MyGameState
 		private MyGameState(
 			final GameSetup setup,
-			final ImmutableSet<Piece> remaining, // remaining pieces
+			final ImmutableSet<Piece> remaining,
 			final ImmutableList<LogEntry> log,
 			final Player mrX,
 			final List<Player> detectives
 		)
-		{
+		{	//INITIALISE FIELDS
 			this.setup = setup;
 			this.remaining = remaining;
+			this.detectives = detectives;
 			this.log = log;
 			this.mrX = mrX;
-			this.detectives = detectives;
+			this.allPlayers = Stream.of(detectives, List.of(mrX))
+								.flatMap(Collection::stream)
+								.collect(toList());  // stream to merge a list of detectives and mrX into allPlayers
+
+			this.detectivePieces = detectives
+									.stream()
+									.map(Player::piece)
+									.collect(ImmutableSet.toImmutableSet()); // maps detectives to their pieces
 
 			this.winner = ImmutableSet.of();
 
-			this.allPlayers = new ArrayList<>(detectives);
-			allPlayers.add(mrX);
+			//------------------------------------------------------ CHECKS FOR WINNERS;
+			//-----------------CHECKS IF DETECTIVES WIN
+			if (detectives.stream().map(Player::location).anyMatch( x -> x == mrX.location())//if any of the locations of detectives are the same as mister x
+					|| (getAvailableMovesGeneric(ImmutableSet.of(mrX.piece())).isEmpty() && remaining.contains(mrX.piece()))) //if mister x's turn, and he can't move (surrounded or incorrect tickets)
+			{this.winner = detectivePieces;}
+			//-----------------CHECKS IF MRX WINS
+			else if (getAvailableMovesGeneric(detectives.stream().map(Player::piece).collect(Collectors.toSet())).isEmpty()//if at anypoint all the detectives can't move
+					|| ((setup.moves.size() == log.size() && remaining.contains(mrX.piece())))) //if the log is full
+			{this.winner = ImmutableSet.of(mrX.piece());}
+			//------------------------------------------------------- DO CHECKS FOR FIELDS ETC.
+			verifyNotNullOrEmpty(setup, "setup is null");
+			verifyNotNullOrEmpty(setup.graph, "graph is null");
+			verifyNotNullOrEmpty(remaining,"remaining pieces null");
 
-			this.detectivePieces = detectives.stream().map(Player::piece).collect(ImmutableSet.toImmutableSet());
+			verifyNotNullOrEmpty(setup.moves,"setup moves are empty");
+			verifyNotNullOrEmpty(setup.graph.nodes().size(), "graph is empty");
+			verifyNotNullOrEmpty(remaining,"remaining pieces empty");
 
-			if (setup.moves.isEmpty()){
-				throw new IllegalArgumentException("moves are empty");}
-			if (setup.graph == null){ throw new IllegalArgumentException(("graph is null"));}
-			if ((setup.graph.nodes()).size() == 0 ) { throw new IllegalArgumentException("graph is empty");}
-
-			if (remaining == null){throw new IllegalArgumentException("remaining pieces null");}
-			if (remaining.isEmpty()){throw new IllegalArgumentException("remaining pieces empty");}
-			//if (log.isEmpty()){ throw new IllegalArgumentException(("log is empty"));} // weirdly passes 6 test
-
-			if (mrX.tickets().isEmpty()) {throw new IllegalArgumentException("tickets are empty");}
-			if (mrX.piece() == null) {throw new IllegalArgumentException("piece is null");}
-
-//			for (Player player : detectives){
-//
-//				if (player.piece() == null) { throw	new IllegalArgumentException("player piece is null");}
-//				if (player.tickets().isEmpty()) { throw new IllegalArgumentException("player tickets are empty");}
-//				if (!(player.tickets().get(Ticket.DOUBLE) == 0)) { throw new IllegalArgumentException("detective has DOUBLE ticket");}
-//				if (!(player.tickets().get(Ticket.SECRET) == 0)) { throw new IllegalArgumentException("detective has SECRET ticket");}
-//				for (Player otherPlayers : otherDetectives(player)){
-//					if (player.location() == otherPlayers.location()){ throw new IllegalArgumentException("detective Locations overlap");}
-//					//if (player.location() == mrX.location()) {throw new IllegalArgumentException("detective and mrx locations overlap");}
-//				}
-//
-//			}
-			log.forEach(logEntry -> {if (logEntry == null) { throw new IllegalArgumentException("log entry is null");}});
+			log.forEach(logEntry -> {verifyNotNullOrEmpty(logEntry, "logEntry is null");});
 
 			detectives.forEach(player -> {
-				if (player.piece() == null) { throw	new IllegalArgumentException("player piece is null");}
-				if (player.tickets().isEmpty()) { throw new IllegalArgumentException("player tickets are empty");}
-				if (!(player.tickets().get(Ticket.DOUBLE) == 0)) { throw new IllegalArgumentException("detective has DOUBLE ticket");}
-				if (!(player.tickets().get(Ticket.SECRET) == 0)) { throw new IllegalArgumentException("detective has SECRET ticket");}
-				otherDetectives(player).forEach(player1 -> {if (player.location() == player1.location()){ throw new IllegalArgumentException("detective Locations overlap");}});
+				verifyNotNullOrEmpty(player.piece(), String.format("%s piece is null", player.piece().webColour()));
+				verifyNotNullOrEmpty(player.tickets(), String.format("%s tickets are empty", player.piece().webColour()));
+				if ((player.tickets().get(Ticket.DOUBLE) != 0)) { throw new IllegalArgumentException("detective has DOUBLE ticket");}	//player checks for double and secret tickets
+				if ((player.tickets().get(Ticket.SECRET) != 0)) { throw new IllegalArgumentException("detective has SECRET ticket");}
+				otherDetectives(player).forEach(player1 -> {
+										if (player.location() == player1.location())
+										{throw new IllegalArgumentException("detective Locations overlap");}});
 			});
 		}
 
-		@Nonnull @Override //TODO
-		public GameSetup getSetup() {
-			return setup;
-		}
+		@Nonnull @Override
+		public GameSetup getSetup() {return setup;}
 
-		@Nonnull @Override //TODO //DONE
+		@Nonnull @Override
 		public ImmutableSet<Piece> getPlayers() { // returns all player pieces
-
 			return  allPlayers
 					.stream()
 					.map(Player::piece)
-					.collect(ImmutableSet.toImmutableSet());//new HashSet<>();
-
+					.collect(ImmutableSet.toImmutableSet());
 		}
 
-		private Player getPlayerFromPiece(Piece piece) {
+		private Player getPlayerFromPiece(Piece piece) { //Gets the Player which owns the piece
 			return allPlayers
 					.stream()
 					.filter(player -> (player.piece() == piece))
@@ -136,84 +138,34 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					.orElse(null);
 		}
 
-		private ImmutableList<Player> otherDetectives(Player player) {
+		private ImmutableList<Player> otherDetectives(Player player) { //returns all other detectives that aren't the player
 			if (player.isMrX()) {return ImmutableList.copyOf(detectives);}
-
-			else {
-				List<Player> others = new ArrayList<>(List.copyOf(detectives));
-				others.remove(player);
-				return ImmutableList.copyOf(others);
+			else {	//returns immutableList of detectives with the player filtered out
+				return ImmutableList.copyOf(detectives.stream().filter(otherDetective -> otherDetective != player).collect(Collectors.toList()));
 			}
 		}
 
 		@Nonnull @Override
-		public Optional<Integer> getDetectiveLocation(Piece.Detective detective) {
-			//				for (Player player : detectives) {
-//					if (player.piece().webColour().equals(detective.webColour())) {
-//						return Optional.of(player.location());
-//					}
-//		return Optional.empty();
-
+		public Optional<Integer> getDetectiveLocation(Piece.Detective detective) { //gets detective location
 			Player player = getPlayerFromPiece(detective);
 			if (player == null) {return Optional.empty();}
 			else {return Optional.of(player.location());}
-
 		}
 
 		@Nonnull @Override
 		public Optional<TicketBoard> getPlayerTickets(Piece piece) {
-
-
-//			for (Player player : allPlayers) {
-//				if (player.piece().webColour().equals(piece.webColour())) {
-//					return Optional.of(new TicketBoard() {
-//						@Override
-//						public int getCount(@Nonnull Ticket ticket) {
-//							return player.tickets().get(ticket);
-//						}
-//					});
-//				}
-//			}
-//			return Optional.empty();
 			Player player = getPlayerFromPiece(piece);
 			if (player == null) return Optional.empty();
 			else {
-				return Optional.of(new TicketBoard() {
-						@Override
-						public int getCount(@Nonnull Ticket ticket) {
-							return player.tickets().get(ticket);
-						}
-				});
+				return Optional.of(ticket -> player.tickets().get(ticket)); // returns optional of implementation of getCount(...) in the TicketBoard interface
 			}
 		}
 
 		@Nonnull @Override
-		public ImmutableList<LogEntry> getMrXTravelLog() {
-			return log;
-		}
+		public ImmutableList<LogEntry> getMrXTravelLog() {return log;}
 
 		@Nonnull @Override
 		public ImmutableSet<Piece> getWinner() {
-			if (!winner.isEmpty()) {
-				return ImmutableSet.copyOf(winner);
-			}
-			//if detectives win
-			if (detectives.stream().map(Player::location).anyMatch( x -> x == mrX.location())//if any of the locations of detectives are the same as mister x
-//					|| (makeSingleMoves(setup, detectives, mrX, mrX.location()).size() == 0)){	//if mr.X has no more space to go to
-					|| (getAvailableMovesGeneric(ImmutableSet.of(mrX.piece())).isEmpty() && remaining.contains(mrX.piece())) // if mister x's turn, and he can't move
-//					|| ((detectives.stream().map(Player::location).collect(Collectors.toSet()).containsAll(setup.graph.adjacentNodes(mrX.location())))) // if mrx adjacent nodes is a subset of detective locations (mrx surrounded)
-//					|| (remaining.contains(mrX.piece()) && getAvailableMoves().isEmpty())
-			){
-				winner = detectivePieces;
-			}
-			//if mrx wins
-			else if (getAvailableMovesGeneric(detectives.stream().map(Player::piece).collect(Collectors.toSet())).isEmpty()//if at anypoint all the detectives can't move
-//				|| (detectives.stream().map(detective -> detective.tickets().values().stream().mapToInt(Integer::intValue).sum()).reduce(0, Integer::sum) == 0)
-				|| ((setup.moves.size() == log.size() && remaining.contains(mrX.piece())))
-			){
-				winner = ImmutableSet.of(mrX.piece());
-			}
-			else {winner = ImmutableSet.of();}
 			return winner;
 		}
 
@@ -408,7 +360,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							//------------------------------------
 							//handles newSetup initialization
 
-							return new MyGameState(setup,
+							return new MyGameState(
+								setup,
 								detectivePieces,
 								ImmutableList.copyOf(newLog),
 								mrX.use(singleMove.ticket).at(singleMove.destination),
@@ -437,11 +390,13 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							}
 
 //							Player
-							return new MyGameState(setup,
+							return new MyGameState(
+								setup,
 								ImmutableSet.copyOf(newRemaining),
 								log,
 								mrX.give(singleMove.ticket),
-								newDetectives);
+								newDetectives
+								);
 						}
 
 					}
