@@ -30,38 +30,30 @@ public class StockFishYard implements Ai {
 
 		ArrayList<Integer> visited = new ArrayList<>();
 		visited.add(source);
-
-//		ArrayList<Integer> locations = new ArrayList(List.copyOf(getDetectiveLocations(board)));
-//		ArrayList<Integer> ignoreLocations = new ArrayList<>();
-
-
+		
 		ArrayList<Integer> prev = new ArrayList<>();
 		for (int i = 0; i < board.getSetup().graph.nodes().size()+1; i++) {
 			prev.add(0);
 		}
 
 		int node;
-//		int length = 1;
+		
 		while(!queue.isEmpty()) {
-			node = queue.get(0);
-			queue.remove(0);
-			for(Integer neighbour : board.getSetup().graph.adjacentNodes(node)) {
-				if (!visited.contains(neighbour)) {
+			node = queue.get(0);	//make the node we analyse the one at the front of the queue
+			queue.remove(0);	//we can now remove this node from the queue
+			for(Integer neighbour : board.getSetup().graph.adjacentNodes(node)) { // goes through all adjacent nodes to a
+				if (!visited.contains(neighbour)) {//if neighbour is a new unvisited node,
+					//add neighbour to the queue
 					queue.add(neighbour);
+					//make the neighbours a visited so they won't be visited again
 					visited.add(neighbour);
+					//make the previous nodes of each neighbour the current node
 					prev.set(neighbour, node);
-
-//					for(Integer location : locations) {
-//						if (Objects.equals(location, neighbour) && (!ignoreLocations.contains(location))) {
-//							ignoreLocations.add(location);
-//							lengths.add(length);
-//						}
-
-
 				}
-
 			}
 		}
+
+		// here we build the paths and calculate the path lengths for each
 		int lengths = 0;
 		for (Integer location : getDetectiveLocations(board)) {
 			int length = 0;
