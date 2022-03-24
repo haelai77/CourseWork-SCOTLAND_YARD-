@@ -30,7 +30,7 @@ public class StockFishYard2 implements Ai {
         return locations;
     }
 //----------------------------------------------------------------------------------------------------
-    @Nonnull public Integer biBFS_dist(@Nonnull Board board, Integer node1, Integer node2){
+    @Nonnull private Integer biBFS_dist(@Nonnull Board board, Integer node1, Integer node2){
         //--------------------- for node1
         Map<Integer, Integer>  node1Map = new HashMap<Integer, Integer>(); //contains previous node to a node
         List<Integer> queue1 = new ArrayList<Integer>(); // nodes to be searched next
@@ -73,40 +73,40 @@ public class StockFishYard2 implements Ai {
                 }
             }
         }
-        Integer overlap = null;
+
+        Integer overlap;
         //-----------------------------------
-        if (visited2.contains(currentNode1)){
+        if (visited2.contains(currentNode1)){ //calculates where the overlapping node is for the two sets of visited nodes. This is where they will meet.
             overlap = currentNode1;
         }
         else {overlap = currentNode2;}
         //-----------------------------------
 
-        int length = 0;
-        Integer ptr = 0;
+        int length = 0; //total length taken for a detective to reach mrX
+
+        Integer ptr = overlap;
+        while (ptr != null) {  //go through the two nodeMaps that point to the previous node of each one in the visited set, and build the path backwards
+            ptr = node1Map.get(ptr);
+            length += 1; //with each new node, add 1 to the total length
+        }
+        ptr = overlap;
         while (ptr != null) {
-            ptr = node1Map.get(overlap);
+            ptr = node2Map.get(ptr);
             length += 1;
         }
-        ptr = 0;
-        while (ptr != null) {
-            ptr = node2Map.get(overlap);
-            length += 1;
-        }
-
-
 
         return length;
     }
 //----------------------------------------------------------------------------------------------------
     @Nonnull @Override public Move pickMove(@Nonnull Board board, Pair<Long, TimeUnit> timeoutPair)
     {
-        // returns a random move, replace with your own implementation
+        long start = System.nanoTime(); //for calculating how long a pickMove takes
         var moves = board.getAvailableMoves().asList(); // mrx moves
 
-        Map<Move, Integer> score = new HashMap<>(); // map for scores for moves
+        Map<Move, Integer> scores = new HashMap<>(); // map for scores for moves
         for (Move move : moves) {   // goes through mrx moves
 
-            int destination = move.accept(new Move.Visitor<Integer>() {
+            int destination = move.accept(new Move.Visitor<>() { //the destination variable holds the final position for mrx's potential moves
                 @Override
                 public Integer visit(Move.SingleMove move) {
                     return move.destination;
@@ -118,11 +118,30 @@ public class StockFishYard2 implements Ai {
                 }
             });
 
-            for (Integer location : getDetectiveLocations(board)) {
-                score.put(move, biBFS_dist(board, destination, location));
+            //the below loop could be added to a helper method called score or something, which gives and array of scores for each move.
+            for (Integer location : getDetectiveLocations(board)) { //for each possible move, use mrx's destination and the other detective locations to calculate the score for this move
+                scores.put(move, biBFS_dist(board, destination, location));
             }
         }
 
+        //the below code calculates the move that corresponds to the biggest score in the move:score map, and returns it.
+        int bestScore = 0;
+        Move move = moves.get(0);
+
+        for (Map.Entry<Move, Integer> score : scores.entrySet()) { //go through all of scores
+            if (score.getValue() > bestScore) { //if the next score is larger, then take note of it
+                bestScore = score.getValue();
+                move = score.getKey(); //move is the move that corresponds to this score.
+            }
+        }
+
+        //info about the decision
+        long end = System.nanoTime();
+        System.out.println( "Out of possible scores " + scores.values());
+        System.out.println("mrX chose " + bestScore);
+        System.out.println("taking time " + (end - start)/1000 + " microseconds" +  "\n");
+
+        return move;
 
 
     }

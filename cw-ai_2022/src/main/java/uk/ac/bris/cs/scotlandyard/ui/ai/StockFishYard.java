@@ -97,10 +97,10 @@ public class StockFishYard implements Ai {
 				bestScoreIndex = scores.indexOf(bestScore);
 			}
 		}
-		System.out.println(scores);
-		System.out.println(bestScore);
-
-		System.out.println(" ");
+//		System.out.println(scores);
+//		System.out.println(bestScore);
+//
+//		System.out.println(" ");
 
 		return moves.get(bestScoreIndex);
 
