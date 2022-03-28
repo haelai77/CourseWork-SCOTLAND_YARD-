@@ -20,92 +20,78 @@ public class StockFishYard2 implements Ai {
 
     //------------------------------------------------------------------------------------------------
 
-    private List<Integer> getDetectiveLocations(Board board) {
+    private List<Integer> getDetectiveLocations(Board board) {  // gets the detective locations 
         List<Integer> locations = new ArrayList<>();
         for (Piece piece : board.getPlayers()) {
             if (piece.isDetective()) {
-                locations.add(board.getDetectiveLocation((Piece.Detective) piece).orElse(0));
+                locations.add(board.getDetectiveLocation((Piece.Detective) piece).orElse(0)); // shouldn't this return nothing instead of 0?
             }
         }
         return locations;
     }
-//----------------------------------------------------------------------------------------------------
+    //----------------------------------------------------------------------------------------------------
     @Nonnull private Integer biBFS_dist(@Nonnull Board board, Integer node1, Integer node2){
         //--------------------- for node1
-        Map<Integer, Integer>  node1Map = new HashMap<Integer, Integer>(); //contains previous node to a node
-        List<Integer> queue1 = new ArrayList<Integer>(); // nodes to be searched next
-        List<Integer> visited1 = new ArrayList<Integer>(); // nodes that have been searched
+        Map<Integer, Integer>  node1Map = new HashMap<Integer, Integer>(){{put(node1, null);}}; //contains previous node map
+        List<Integer> queue1 = new ArrayList<Integer>(node1);                   // next nodes for search
+        List<Integer> visited1 = new ArrayList<Integer>(node1);                 // visited nodes
         //--------------------- for node2
-        Map<Integer, Integer>  node2Map = new HashMap<Integer, Integer>();
-        List<Integer> queue2 = new ArrayList<Integer>();
-        List<Integer> visited2 = new ArrayList<Integer>();
-        //---------------------
-        queue1.add(node1);  //adds nodes to their respective visited and queue lists
-        queue2.add(node2);
-        visited1.add(node1);
-        visited2.add(node2);
-        node1Map.put(node1, null);
-        node2Map.put(node2, null);
+        Map<Integer, Integer>  node2Map = new HashMap<Integer, Integer>(){{put(node2, null);}};
+        List<Integer> queue2 = new ArrayList<Integer>(node2);
+        List<Integer> visited2 = new ArrayList<Integer>(node2);
         //---------------------
         Integer currentNode1 = node1; //"pointers" to the current nodes
         Integer currentNode2 = node2;
 
         while (!visited2.contains(currentNode1) || !visited1.contains(currentNode2)) {  // while visited lists do not overlap
-            currentNode1 = queue1.get(0); // sets current node to first element in queue
-            queue1.remove(currentNode1); // removes currentNode1 which is the first element from the queue
-
-            for (Integer neighbour1 : board.getSetup().graph.adjacentNodes(currentNode1)) { // for every neighbour to a node
-                if (!visited1.contains(neighbour1)) { // if the neighbour is unvisited
-                    queue1.add(neighbour1);  // add it the queue
-                    visited1.add(neighbour1); // add it neighbour1 to visited
-                    node1Map.put(neighbour1, currentNode1); // add previous node entry to map
-                }
-            }
-
-            currentNode2 = queue2.get(0);
-            queue2.remove(currentNode2);
-
-            for (Integer neighbour2 : board.getSetup().graph.adjacentNodes(currentNode2)) {
-                if (!visited2.contains(neighbour2)) {
-                    queue2.add(neighbour2);
-                    visited2.add(neighbour2);
-                    node2Map.put(neighbour2, currentNode2);
-                }
-            }
+            currentNode1 = bfs_loop(board, node1Map, queue1, visited1);
+            currentNode2 = bfs_loop(board, node2Map, queue2, visited2);
         }
-
-        Integer overlap;
         //-----------------------------------
+        Integer overlap;
         if (visited2.contains(currentNode1)){ //calculates where the overlapping node is for the two sets of visited nodes. This is where they will meet.
             overlap = currentNode1;
         }
         else {overlap = currentNode2;}
         //-----------------------------------
 
-        int length = 0; //total length taken for a detective to reach mrX
+        int length = distCalc(overlap, List.of(node1Map, node2Map));
+        return length-1;
+    }
+    private Integer bfs_loop(@Nonnull Board board, Map<Integer, Integer> nodeMap, List<Integer> queue, List<Integer> visited) {
+        Integer currentNode;
+        currentNode = queue.get(0); // sets current node to first element in queue
+        queue.remove(currentNode); // removes currentNode which is the first element from the queue
 
-        Integer ptr = overlap;
-        while (ptr != null) {  //go through the two nodeMaps that point to the previous node of each one in the visited set, and build the path backwards
-            ptr = node1Map.get(ptr);
+        for (Integer neighbour : board.getSetup().graph.adjacentNodes(currentNode)) { // for every neighbour to a node
+            if (!visited.contains(neighbour)) { // if the neighbour is unvisited
+                queue.add(neighbour);  // add it the queue
+                nodeMap.put(neighbour, currentNode); // add previous node entry to map
+                visited.add(neighbour); // add it neighbour to visited
+            }
+        }
+        return currentNode;
+    }
+    private Integer distCalc(Integer overlap, List<Map<Integer, Integer>> nodeMapList){
+        Integer length = 0;
+
+        for(Map<Integer, Integer>nodeMap: nodeMapList) {
+            Integer ptr = overlap;
+            while (ptr != null) {  //go through the two nodeMaps that point to the previous node of each one in the visited set, and build the path backwards
+            ptr = nodeMap.get(ptr);
             length += 1; //with each new node, add 1 to the total length
+            }
         }
-        ptr = overlap;
-        while (ptr != null) {
-            ptr = node2Map.get(ptr);
-            length += 1;
-        }
-
         return length;
     }
-//----------------------------------------------------------------------------------------------------
-    @Nonnull @Override public Move pickMove(@Nonnull Board board, Pair<Long, TimeUnit> timeoutPair)
-    {
+    //------------------------------------------------------------------------------------------------------------------
+    @Nonnull @Override public Move pickMove(@Nonnull Board board, Pair<Long, TimeUnit> timeoutPair) {
         long start = System.nanoTime(); //for calculating how long a pickMove takes
+        //---------------
         var moves = board.getAvailableMoves().asList(); // mrx moves
-
         Map<Move, Integer> scores = new HashMap<>(); // map for scores for moves
-        for (Move move : moves) {   // goes through mrx moves
 
+        for (Move move : moves) {   // goes through mrx moves //fills out map of moves to scores
             int destination = move.accept(new Move.Visitor<>() { //the destination variable holds the final position for mrx's potential moves
                 @Override
                 public Integer visit(Move.SingleMove move) {
