@@ -33,12 +33,12 @@ public class StockFishYard2 implements Ai {
     @Nonnull private Integer biBFS_dist(@Nonnull Board board, Integer node1, Integer node2){
         //--------------------- for node1
         Map<Integer, Integer>  node1Map = new HashMap<Integer, Integer>(){{put(node1, null);}}; //contains previous node map
-        List<Integer> queue1 = new ArrayList<Integer>(node1);                   // next nodes for search
-        List<Integer> visited1 = new ArrayList<Integer>(node1);                 // visited nodes
+        List<Integer> queue1 = new ArrayList<Integer>(List.of(node1));                   // next nodes for search
+        List<Integer> visited1 = new ArrayList<Integer>(List.of(node1));                 // visited nodes
         //--------------------- for node2
         Map<Integer, Integer>  node2Map = new HashMap<Integer, Integer>(){{put(node2, null);}};
-        List<Integer> queue2 = new ArrayList<Integer>(node2);
-        List<Integer> visited2 = new ArrayList<Integer>(node2);
+        List<Integer> queue2 = new ArrayList<Integer>(List.of(node2));
+        List<Integer> visited2 = new ArrayList<Integer>(List.of(node2));
         //---------------------
         Integer currentNode1 = node1; //"pointers" to the current nodes
         Integer currentNode2 = node2;
@@ -73,7 +73,7 @@ public class StockFishYard2 implements Ai {
         return currentNode;
     }
     private Integer distCalc(Integer overlap, List<Map<Integer, Integer>> nodeMapList){
-        Integer length = 0;
+        int length = 0;
 
         for(Map<Integer, Integer>nodeMap: nodeMapList) {
             Integer ptr = overlap;
@@ -91,18 +91,11 @@ public class StockFishYard2 implements Ai {
         var moves = board.getAvailableMoves().asList(); // mrx moves
         Map<Move, Integer> scores = new HashMap<>(); // map for scores for moves
 
-        for (Move move : moves) {   // goes through mrx moves //fills out map of moves to scores
-            int destination = move.accept(new Move.Visitor<>() { //the destination variable holds the final position for mrx's potential moves
-                @Override
-                public Integer visit(Move.SingleMove move) {
-                    return move.destination;
-                }
+        //a new visitor that returns the final destination of a move.
+        DestinationVisitor visitor = new DestinationVisitor();
 
-                @Override
-                public Integer visit(Move.DoubleMove move) {
-                    return move.destination2;
-                }
-            });
+        for (Move move : moves) {   // goes through mrx moves //fills out map of moves to scores
+            int destination = move.accept(visitor);
 
             //the below loop could be added to a helper method called score or something, which gives and array of scores for each move.
             for (Integer location : getDetectiveLocations(board)) { //for each possible move, use mrx's destination and the other detective locations to calculate the score for this move
