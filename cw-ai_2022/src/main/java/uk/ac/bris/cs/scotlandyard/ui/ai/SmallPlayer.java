@@ -1,9 +1,6 @@
 package uk.ac.bris.cs.scotlandyard.ui.ai;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-
-import javax.annotation.concurrent.Immutable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,12 +23,22 @@ public class SmallPlayer {
     }
 
     //returns a new player that has "travelled" to the next destination and used up the ticket.
-    public SmallPlayer travel (Integer destination, Integer ticket) {
+    public SmallPlayer travel (Integer destination, Iterable<Integer> tickets) {
         List<Integer> newTickets = new ArrayList<>(List.copyOf(this.tickets));
+        for (Integer ticket : tickets) {
 
-        newTickets.set(ticket, newTickets.get(ticket) - 1);
+            newTickets.set(ticket, newTickets.get(ticket) - 1);
 
+        }
         return new SmallPlayer(this.id, destination, ImmutableList.copyOf(newTickets));
+    }
+
+    public SmallPlayer receive (ImmutableList<Integer> tickets) {
+        ArrayList<Integer> newTickets = new ArrayList<>(List.copyOf(this.tickets));
+        for ( int i = 0; i < tickets.size(); i++) {
+            newTickets.set(i, newTickets.get(i) + tickets.get(i));
+        }
+        return new SmallPlayer(this.id, this.location, ImmutableList.copyOf(newTickets));
     }
 
 }

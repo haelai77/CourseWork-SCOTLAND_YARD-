@@ -1,7 +1,6 @@
 package uk.ac.bris.cs.scotlandyard.ui.ai;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 
 //A small version of a gamestate. Holds small players and the log number representing the number of turns taken.
 public class SmallGameState {
