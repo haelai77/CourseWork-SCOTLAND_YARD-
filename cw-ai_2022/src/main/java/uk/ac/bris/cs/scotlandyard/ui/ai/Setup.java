@@ -11,6 +11,15 @@ public class Setup {
     final ImmutableValueGraph<Integer, ImmutableSet<ScotlandYard.Transport>> graph;
     static Setup setup;
 
+    static public Integer getSmallTicket(ScotlandYard.Transport transport) {
+        return switch (transport) {
+            case TAXI -> 0;
+            case BUS -> 1;
+            case UNDERGROUND -> 2;
+            case FERRY -> 4;
+        };
+    }
+
     private Setup(ImmutableList<Boolean> moves, ImmutableValueGraph<Integer, ImmutableSet<ScotlandYard.Transport>> graph) {
         this.moves = moves;
         this.graph = graph;

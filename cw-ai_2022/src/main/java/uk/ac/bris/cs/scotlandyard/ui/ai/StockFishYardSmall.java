@@ -87,8 +87,8 @@ public class StockFishYardSmall implements Ai {
 
     private Integer score(SmallGameState gameState) {
         int score = 0;
-        for (SmallPlayer detective : gameState.detectives) {
-            score += biBFS_dist(gameState.mrX.location(), detective.location());
+        for (SmallPlayer detective : gameState.detectives()) {
+            score += biBFS_dist(gameState.mrX().location(), detective.location());
         }
         return score;
     }
@@ -145,7 +145,8 @@ public class StockFishYardSmall implements Ai {
 
     //given a type of transport in the game, return the index of the ticket array that corresponds to the required ticket
     //for example, given a TAXI, would return 0, since in a player's ticket array the 0th index holds the number of taxi tickets the player has
-    private Integer getSmallTicket(ScotlandYard.Transport transport) {
+
+    public Integer getSmallTicket(ScotlandYard.Transport transport) {
         return switch (transport) {
             case TAXI -> 0;
             case BUS -> 1;
@@ -157,11 +158,11 @@ public class StockFishYardSmall implements Ai {
     //given a list of players, tells if there are no players able to move
     private Boolean isTrapped(SmallGameState gameState, ImmutableList<SmallPlayer> players) {
         for (SmallPlayer player : players) {   // for each player
-            for (Integer neighbour : Setup.getInstance().graph.adjacentNodes(player.location)) {   //for each of their neighbouring nodes
-                for (ScotlandYard.Transport t : Objects.requireNonNull(Setup.getInstance().graph.edgeValueOrDefault(player.location, neighbour, ImmutableSet.of()))) {
+            for (Integer neighbour : Setup.getInstance().graph.adjacentNodes(player.location())) {   //for each of their neighbouring nodes
+                for (ScotlandYard.Transport t : Objects.requireNonNull(Setup.getInstance().graph.edgeValueOrDefault(player.location(), neighbour, ImmutableSet.of()))) {
                     int smallTicket = getSmallTicket(t);
-                    if ((player.tickets.get(smallTicket) > 0) //if the player has the ticket for this
-                            && gameState.detectives.stream().map(SmallPlayer::location).noneMatch(x -> Objects.equals(x, neighbour))) { //and no detectives are here
+                    if ((player.tickets().get(smallTicket) > 0) //if the player has the ticket for this
+                            && gameState.detectives().stream().map(SmallPlayer::location).noneMatch(x -> Objects.equals(x, neighbour))) { //and no detectives are here
                         return false; //then at least one player can move, and the game can continue for now
                     }
                 }
@@ -175,14 +176,14 @@ public class StockFishYardSmall implements Ai {
 
         if (mrXturn) { // if its mr X's turn
             // or detectives have captured mrX
-            return (isTrapped(gameState, ImmutableList.of(gameState.mrX))) //if mrX is trapped
-                    || (gameState.detectives.stream().map(SmallPlayer::location).anyMatch(x -> Objects.equals(x, gameState.mrX.location())));
+            return (isTrapped(gameState, ImmutableList.of(gameState.mrX()))) //if mrX is trapped
+                    || (gameState.detectives().stream().map(SmallPlayer::location).anyMatch(x -> Objects.equals(x, gameState.mrX().location())));
         }
         // on the detectives' turn
         else {
             // or all detectives are trapped
-            return (Setup.getInstance().moves.size() == gameState.logNumber) // if the log number has been filled
-                    || (isTrapped(gameState, gameState.detectives));
+            return (Setup.getInstance().moves.size() == gameState.logNumber()) // if the log number has been filled
+                    || (isTrapped(gameState, gameState.detectives()));
         }
     }
 
@@ -193,23 +194,23 @@ public class StockFishYardSmall implements Ai {
 
         //until count is the size of the number of players:
         //in this case, existing has been filled up with all the players, so a new gamestate of this permutation can be made and is returned as the base of this recursive call
-        if (count >= gameState.detectives.size()) {
-            SmallGameState newState = new SmallGameState(gameState.logNumber, gameState.mrX.receive(ImmutableList.copyOf(usedTickets)), ImmutableList.copyOf(existing));
+        if (count >= gameState.detectives().size()) {
+            SmallGameState newState = new SmallGameState(gameState.logNumber(), gameState.mrX().receive(ImmutableList.copyOf(usedTickets)), ImmutableList.copyOf(existing));
 
             return new ArrayList<>(List.of(newState));
         }
 
         else {
             //derive the current detective to calculate the next available moves for
-            SmallPlayer detective = gameState.detectives.get(count);
+            SmallPlayer detective = gameState.detectives().get(count);
 
             //dontSwap deals with the logic behind disallowing adjacent detectives to swap places.
             //if a player in existing has moved to the location of the detective, then this detective's starting location
             //is stored in an array. this starting location is now unable to be travelled to by the current detective, ie swapping places.
             List<Integer> dontSwap = new ArrayList<>();
             for (SmallPlayer other : existing) {
-                if (other.location == detective.location) {
-                    dontSwap.add(gameState.getPlayer(other.id).location());
+                if (other.location() == detective.location()) {
+                    dontSwap.add(gameState.getPlayer(other.id()).location());
                 }
             }
 
@@ -222,18 +223,18 @@ public class StockFishYardSmall implements Ai {
 
             for (int neighbour : Setup.getInstance().graph.adjacentNodes(detective.location())) {  //for each of the detectives neighbouring nodes
 
-                if (existing.stream().map(player -> player.location).anyMatch(x -> x == neighbour)  //if any player in existing already occupies this space
+                if (existing.stream().map(player -> player.location()).anyMatch(x -> x == neighbour)  //if any player in existing already occupies this space
                         || (!dontSwap.isEmpty() && dontSwap.stream().anyMatch(x -> x == neighbour))) { //if any location in dontSwap matches this space
                     continue;
                 }
 
-                for (ScotlandYard.Transport t : Objects.requireNonNull(Setup.getInstance().graph.edgeValueOrDefault(detective.location, neighbour, ImmutableSet.of()))) { //for each transport type between these nodes
+                for (ScotlandYard.Transport t : Objects.requireNonNull(Setup.getInstance().graph.edgeValueOrDefault(detective.location(), neighbour, ImmutableSet.of()))) { //for each transport type between these nodes
 
                     ArrayList<SmallPlayer> newExisting = new ArrayList<>(List.copyOf(existing)); //make a new existing to put this new player in
 
                     int smallTicket = getSmallTicket(t); //the ticket index
 
-                    if ((detective.tickets.get(smallTicket) > 0)) { //if the detective has this ticket
+                    if ((detective.tickets().get(smallTicket) > 0)) { //if the detective has this ticket
 
                         ArrayList<Integer> newUsedTickets = new ArrayList<>(List.copyOf(usedTickets)); //copy of used tickets to give to mrX
                         newUsedTickets.set(smallTicket, newUsedTickets.get(smallTicket) + 1); //add this ticket to the usedtickets
@@ -248,10 +249,10 @@ public class StockFishYardSmall implements Ai {
 
 
             if (!foundMove && dontSwap.isEmpty()) { //if a move hasnt been found, detective is trapped. if dontswap isnt empty, then that means a detective in existing is overlapping with it and it itself is trapped, so this is not valid
-            //however if dontswap is empty, then a new permutation can be made with the detective not having moved.
-                    ArrayList<SmallPlayer> newExisting = new ArrayList<>(List.copyOf(existing));
-                    newExisting.add(detective);
-                    newStates.addAll(getNextDetectivePositions(gameState, count + 1, ImmutableList.copyOf(newExisting), usedTickets));
+                //however if dontswap is empty, then a new permutation can be made with the detective not having moved.
+                ArrayList<SmallPlayer> newExisting = new ArrayList<>(List.copyOf(existing));
+                newExisting.add(detective);
+                newStates.addAll(getNextDetectivePositions(gameState, count + 1, ImmutableList.copyOf(newExisting), usedTickets));
             }
 
             return newStates; //return the new states.
@@ -261,28 +262,28 @@ public class StockFishYardSmall implements Ai {
     //this method gets the next positions down the minimax tree, given a gameState and the turn.
     public ArrayList<SmallGameState> getNextMrXPositions (SmallGameState gameState) {
         ArrayList<SmallGameState> result = new ArrayList<>();
-        for (int neighbour : Setup.getInstance().graph.adjacentNodes(gameState.mrX.location)) { // for each neighbouring node to mrX
-            for (ScotlandYard.Transport t : Objects.requireNonNull(Setup.getInstance().graph.edgeValueOrDefault(gameState.mrX.location, neighbour, ImmutableSet.of()))) {
+        for (int neighbour : Setup.getInstance().graph.adjacentNodes(gameState.mrX().location())) { // for each neighbouring node to mrX
+            for (ScotlandYard.Transport t : Objects.requireNonNull(Setup.getInstance().graph.edgeValueOrDefault(gameState.mrX().location(), neighbour, ImmutableSet.of()))) {
                 //the transport ticket required
                 int smallTicket = getSmallTicket(t);
 
-                if ((gameState.mrX.tickets.get(smallTicket) > 0 || gameState.mrX.tickets.get(4) > 0) //if mrX has this ticket or a secret ticket
-                        && gameState.detectives.stream().map(SmallPlayer::location).noneMatch(x -> Objects.equals(x, neighbour))) { //and no detectives are at this node
+                if ((gameState.mrX().tickets().get(smallTicket) > 0 || gameState.mrX().tickets().get(4) > 0) //if mrX has this ticket or a secret ticket
+                        && gameState.detectives().stream().map(SmallPlayer::location).noneMatch(x -> Objects.equals(x, neighbour))) { //and no detectives are at this node
 
-                    SmallGameState singleMoveState = new SmallGameState(gameState.logNumber + 1, gameState.mrX.travel(neighbour, List.of(smallTicket)), gameState.detectives); // new gamestate with this new move
+                    SmallGameState singleMoveState = new SmallGameState(gameState.logNumber() + 1, gameState.mrX().travel(neighbour, List.of(smallTicket)), gameState.detectives()); // new gamestate with this new move
                     result.add(singleMoveState); //add this to the result
 
-                    if (singleMoveState.mrX.tickets.get(3) > 0) { // if mrX has a double ticket
+                    if (singleMoveState.mrX().tickets().get(3) > 0) { // if mrX has a double ticket
 
                         //compute double moves; do the same as with single ticket and add all of these new gamestates to the result.
 
-                        for (int neighbour2 : Setup.getInstance().graph.adjacentNodes(singleMoveState.mrX.location)) {
-                            for (ScotlandYard.Transport t2 : Objects.requireNonNull(Setup.getInstance().graph.edgeValueOrDefault(singleMoveState.mrX.location, neighbour2, ImmutableSet.of()))) {
+                        for (int neighbour2 : Setup.getInstance().graph.adjacentNodes(singleMoveState.mrX().location())) {
+                            for (ScotlandYard.Transport t2 : Objects.requireNonNull(Setup.getInstance().graph.edgeValueOrDefault(singleMoveState.mrX().location(), neighbour2, ImmutableSet.of()))) {
                                 int smallTicket2 = getSmallTicket(t2);
-                                if ((singleMoveState.mrX.tickets.get(smallTicket2) > 0 || gameState.mrX.tickets.get(4) > 0)
-                                        && singleMoveState.detectives.stream().map(SmallPlayer::location).noneMatch(x -> Objects.equals(x, neighbour2))) {
+                                if ((singleMoveState.mrX().tickets().get(smallTicket2) > 0 || gameState.mrX().tickets().get(4) > 0)
+                                        && singleMoveState.detectives().stream().map(SmallPlayer::location).noneMatch(x -> Objects.equals(x, neighbour2))) {
 
-                                    SmallGameState doubleMoveState = new SmallGameState(gameState.logNumber + 1, gameState.mrX.travel(neighbour2, List.of(smallTicket2, 3)), gameState.detectives);
+                                    SmallGameState doubleMoveState = new SmallGameState(gameState.logNumber() + 1, gameState.mrX().travel(neighbour2, List.of(smallTicket2, 3)), gameState.detectives());
                                     result.add(doubleMoveState);
                                 }
                             }
@@ -355,7 +356,7 @@ public class StockFishYardSmall implements Ai {
         }
         nodes +=1;
         assert g != null;
-        return g.mrX.location();
+        return g.mrX().location();
     }
 
     @Nonnull @Override public Move pickMove(@Nonnull Board board, Pair<Long, TimeUnit> timeoutPair) {
