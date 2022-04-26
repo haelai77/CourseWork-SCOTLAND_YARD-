@@ -35,7 +35,7 @@ public class SmallGameState {
     }
 
     //given a list of players, tells if there are no players able to move
-    private Boolean isTrapped(Boolean mrX) {
+    private Boolean isTrapped(Boolean mrX) { // optimise
 
         if (mrX) {
             for (Integer neighbour : Setup.getInstance().graph.adjacentNodes(this.mrX.location())) {   //for each of their neighbouring nodes

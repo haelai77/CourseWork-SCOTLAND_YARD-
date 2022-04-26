@@ -4,10 +4,13 @@ import com.google.common.collect.ImmutableSet;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
 public class PositionGetterMrX implements PositionGetter {
+
+    Boolean detCloseBy = false;
 
     @Override
     public ArrayList<SmallGameState> getNextPositions(SmallGameState gameState) {
@@ -23,7 +26,22 @@ public class PositionGetterMrX implements PositionGetter {
                     SmallGameState singleMoveState = new SmallGameState(gameState.logNumber() + 1, gameState.mrX().travel(neighbour, List.of(smallTicket)), gameState.detectives()); // new gamestate with this new move
                     result.add(singleMoveState); //add this to the result
 
-                    if (gameState.mrX().has(3)) { // if mrX has a double ticket
+
+                    HashSet<Integer> closeBy = new HashSet<>();
+                    for ( Integer adjacent : Setup.getInstance().graph.adjacentNodes(gameState.mrX().location())){
+                        if (!closeBy.contains(adjacent)){
+                            closeBy.add(adjacent);
+                        }
+                    }
+                    for (SmallPlayer det : gameState.detectives()){
+                        if (closeBy.contains(det.location())){
+                            detCloseBy = true;
+                            break;
+                        }
+                    }
+
+                    if (gameState.mrX().has(3) && detCloseBy) { // if mrX has a double ticket
+
 
                         //compute double moves; do the same as with single ticket and add all of these new gamestates to the result.
 

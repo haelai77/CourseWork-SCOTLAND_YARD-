@@ -1,6 +1,7 @@
 package uk.ac.bris.cs.scotlandyard.ui.ai;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.atlassian.fugue.Pair;
 import uk.ac.bris.cs.scotlandyard.model.*;
 
@@ -10,24 +11,18 @@ import java.util.concurrent.TimeUnit;
 
 public class StockFishYardSmall2 implements Ai {
 
-    public static int nodes = 0;
-
     @Nonnull
     @Override
     public String name() {return "StockFishYardSmall2";}
     //----------------------------------------------------------------------------------------------------
     @Nonnull
-    private Integer biBFS_dist(Integer node1, Integer node2) {
+    private Integer biBFS_dist(Integer node1, Integer node2) { // finds distance
         //--------------------- for node1
-        Map<Integer, Integer> node1Map = new HashMap<>() {{
-            put(node1, null);
-        }}; //contains previous node map
-        List<Integer> queue1 = new ArrayList<>(List.of(node1));                   // next nodes for search
-        List<Integer> visited1 = new ArrayList<>(List.of(node1));                 // visited nodes
+        Map<Integer, Integer> node1Map = new HashMap<>() {{put(node1, null);}}; //contains previous node map
+        List<Integer> queue1 = new ArrayList<>(List.of(node1)); // next nodes for search
+        List<Integer> visited1 = new ArrayList<>(List.of(node1)); // visited nodes
         //--------------------- for node2
-        Map<Integer, Integer> node2Map = new HashMap<>() {{
-            put(node2, null);
-        }};
+        Map<Integer, Integer> node2Map = new HashMap<>() {{put(node2, null);}};
         List<Integer> queue2 = new ArrayList<>(List.of(node2));
         List<Integer> visited2 = new ArrayList<>(List.of(node2));
         //---------------------
@@ -35,7 +30,7 @@ public class StockFishYardSmall2 implements Ai {
         Integer currentNode2 = node2;
 
         while (!visited2.contains(currentNode1) || !visited1.contains(currentNode2)) {  // while visited lists do not overlap
-            currentNode1 = bfs_loop(node1Map, queue1, visited1);
+            currentNode1 = bfs_loop(node1Map, queue1, visited1); // execute bfs from source and destination (i.e. detective, mrx)
             currentNode2 = bfs_loop(node2Map, queue2, visited2);
         }
         //-----------------------------------
@@ -46,8 +41,7 @@ public class StockFishYardSmall2 implements Ai {
             overlap = currentNode2;
         }
         //-----------------------------------
-
-        int length = distCalc(overlap, List.of(node1Map, node2Map));
+        int length = distCalc(overlap, List.of(node1Map, node2Map)); //calculates distance between detective and mrx
         return length - 1;
     }
 
@@ -86,7 +80,34 @@ public class StockFishYardSmall2 implements Ai {
         for (SmallPlayer detective : gameState.detectives()) {
             score += biBFS_dist(gameState.mrX().location(), detective.location());
         }
+        //score += connectivity(gameState, gameState.mrX().location(), gameState.mrX());
         return score;
+    }
+
+    private int connectivity(SmallGameState gameState, int node, SmallPlayer duplicateX){
+        int connectivityScore = 0;
+
+        mainLoop:
+        for (Integer neighbour : Setup.getInstance().graph.adjacentNodes(node)) { // for every neighbour to the source node
+            for (SmallPlayer dets : gameState.detectives()){     // checks if neighbours are already occupied if so skip adding score ?
+                if (Objects.equals(dets.location(), neighbour)) {
+                    connectivityScore -= 100;
+                    continue mainLoop;
+                }
+            }
+            Optional<ImmutableSet<ScotlandYard.Transport>> transportSet = Setup.getInstance().graph.edgeValue(neighbour, node); // get the transport type(s) between current node and neighbour node(s)
+            if (transportSet.isPresent()) {
+                for (ScotlandYard.Transport transport : transportSet.get()) {   // for every type of transport between the neighbour and source node
+                    if (duplicateX.has(Setup.getSmallTicket(transport))) {   // check if mrX has tickets to move there
+                        connectivityScore += 5;
+                        break;  //if mrx has a ticket to move there then connectivityScore is increased
+                        //connectivityScore += connectivity()
+                    }
+                }
+            }
+        }
+
+        return connectivityScore;
     }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -142,7 +163,6 @@ public class StockFishYardSmall2 implements Ai {
     //this is the minimax method, which follows the classic minimax algorithm that we all know and love
     public Integer miniMax(SmallGameState gameState, int depth, int alpha, int beta, Boolean mrXturn, PositionGetter x, PositionGetter d) {
         if ((depth == 0) || gameState.didSomeoneWin(mrXturn)) {
-            nodes +=1;
             return score(gameState);
         }
 
@@ -157,7 +177,6 @@ public class StockFishYardSmall2 implements Ai {
                     break;
                 }
             }
-            nodes +=1;
             return maxEval;
         }
 
@@ -173,12 +192,12 @@ public class StockFishYardSmall2 implements Ai {
                 }
 
             }
-            nodes+=1;
+
             return minEval;
         }
     }
 
-    //the first minimax call, which calls minimax itself. instead of recursively returning the score of the possible gamestates, it returns the location of the best gamestate to choose.
+    //the first minimax call, which calls minimax itself. It returns the location of the best gamestate to choose.
     public Integer firstMiniMax(SmallGameState gameState, int depth, PositionGetter x, PositionGetter d) {
         int alpha = Integer.MIN_VALUE;
         int beta = Integer.MAX_VALUE;
@@ -196,7 +215,7 @@ public class StockFishYardSmall2 implements Ai {
                 break;
             }
         }
-        nodes +=1;
+
         assert g != null;
         return g.mrX().location();
     }
