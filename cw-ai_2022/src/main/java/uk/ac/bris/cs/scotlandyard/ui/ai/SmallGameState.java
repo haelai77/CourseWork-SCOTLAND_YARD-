@@ -65,16 +65,22 @@ public class SmallGameState {
     }
 
     //checks if someone has won the game
-    public Boolean didSomeoneWin(Boolean mrXturn) {
+    public Integer didSomeoneWin(Boolean mrXturn) {
 
         if (mrXturn) { // if its mr X's turn
-            return (this.isTrapped(true)) //if mrX is trapped
-                    || (this.detectives().stream().map(SmallPlayer::location).anyMatch(x -> Objects.equals(x, this.mrX().location()))); // or detectives have captured mrX
+            if (this.isTrapped(true) //if mrX is trapped
+                    || (this.detectives().stream().map(SmallPlayer::location).anyMatch(x -> Objects.equals(x, this.mrX().location())))) {
+                return Integer.MIN_VALUE;
+            } // or detectives have captured mrX
+            else return 0;
         }
         // on the detectives' turn
         else {
-            return (Setup.getInstance().moves.size() == this.logNumber()) // if the log number has been filled
-                    || (this.isTrapped(false));  // or all detectives are trapped
+            if (Setup.getInstance().moves.size() == this.logNumber() // if the log number has been filled
+                    || (this.isTrapped(false))) {
+                return Integer.MAX_VALUE;// or all detectives are trapped
+            }
+            else return 0;
         }
     }
 

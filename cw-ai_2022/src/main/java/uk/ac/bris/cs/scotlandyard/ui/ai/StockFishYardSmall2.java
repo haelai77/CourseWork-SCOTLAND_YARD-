@@ -80,7 +80,7 @@ public class StockFishYardSmall2 implements Ai {
         for (SmallPlayer detective : gameState.detectives()) {
             score += biBFS_dist(gameState.mrX().location(), detective.location());
         }
-        //score += connectivity(gameState, gameState.mrX().location(), gameState.mrX());
+        score += connectivity(gameState, gameState.mrX().location(), gameState.mrX());
         return score;
     }
 
@@ -162,8 +162,13 @@ public class StockFishYardSmall2 implements Ai {
 
     //this is the minimax method, which follows the classic minimax algorithm that we all know and love
     public Integer miniMax(SmallGameState gameState, int depth, int alpha, int beta, Boolean mrXturn, PositionGetter x, PositionGetter d) {
-        if ((depth == 0) || gameState.didSomeoneWin(mrXturn)) {
+        int win = gameState.didSomeoneWin(mrXturn);
+        if (depth == 0) {
             return score(gameState);
+        }
+
+        else if (win != 0) {
+            return win;
         }
 
         else if (mrXturn) {
@@ -204,9 +209,15 @@ public class StockFishYardSmall2 implements Ai {
         int maxEval = Integer.MIN_VALUE;
         int eval;
         SmallGameState g = null;
+
+        HashSet<Integer> deathNodes = new HashSet<>();
+        for ( SmallPlayer det : gameState.detectives()){
+            deathNodes.addAll(Setup.getInstance().graph.adjacentNodes(det.location()));
+        }
+
         for (SmallGameState gameState1 : x.getNextPositions(gameState)) {
             eval = miniMax(gameState1, depth-1, alpha, beta, false, x, d);
-            if (eval > maxEval) {
+            if (eval >= maxEval) {
                 maxEval = eval;
                 g = gameState1;
             }
@@ -222,6 +233,10 @@ public class StockFishYardSmall2 implements Ai {
 
     @Nonnull @Override public Move pickMove(@Nonnull Board board, Pair<Long, TimeUnit> timeoutPair) {
 
+        if (!board.getWinner().isEmpty()) {
+            return board.getAvailableMoves().asList().get(0);
+        }
+
         // setup is a singleton class that holds moves and graph, since these never change across the algorithm
         Setup.getInstance(board.getSetup().moves, board.getSetup().graph);
 
@@ -229,6 +244,7 @@ public class StockFishYardSmall2 implements Ai {
         SmallGameState start = makeSmallGameState(board);
 
         DestinationVisitor v = new DestinationVisitor();
+        TicketVisitor t = new TicketVisitor();
 
         //STRATEGY PATTERN
         PositionGetter xGetter = new PositionGetterMrX();
@@ -236,19 +252,45 @@ public class StockFishYardSmall2 implements Ai {
 
         int moveTo = firstMiniMax(start, 3, xGetter, dGetter);
 
+        boolean single = (Setup.getInstance().graph.adjacentNodes(start.mrX().location()).contains(moveTo));
+
+        ArrayList<Move> moves = new ArrayList<>();
         for (Move move : board.getAvailableMoves().asList()) {
             if (move.accept(v) == moveTo) {
-                return move;
+                if (single && move.accept(t).size() == 1) {
+                    moves.add(move);
+                }
+                else if (!single && move.accept(t).size() == 2) {
+                    moves.add(move);
+                }
             }
         }
 
+        boolean hide = ((board.getMrXTravelLog().size() > 0) && (board.getMrXTravelLog().get(board.getMrXTravelLog().size()-1).location().orElse(-1) > -1));
+
+        if (!hide) {
+            for (Move move : moves) {
+                    if (!move.accept(t).contains(ScotlandYard.Ticket.SECRET)) {
+                        return move;
+                    }
+            }
+        }
+        else {
+            for (Move move : moves) {
+                    if (move.accept(t).contains(ScotlandYard.Ticket.SECRET)) {
+                        return move;
+                }
+            }
+        }
+
+        return moves.get(0);
         //TODO:
         //unit tests
         //add polymorphism with players and mrx
         //getSmallTicket in global area
         //improve score
 
-        return board.getAvailableMoves().asList().get(0);
+        //return board.getAvailableMoves().asList().get(0);
     }
 }
 
