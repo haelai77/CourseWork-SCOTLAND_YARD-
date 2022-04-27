@@ -14,7 +14,7 @@ public class StockFishYardSmall2 implements Ai {
     @Nonnull
     @Override
     public String name() {return "StockFishYardSmall2";}
-    //----------------------------------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------- scoring stuff
     @Nonnull
     private Integer biBFS_dist(Integer node1, Integer node2) { // finds distance
         //--------------------- for node1
@@ -117,7 +117,7 @@ public class StockFishYardSmall2 implements Ai {
     private SmallGameState makeSmallGameState(Board board) {
         List<ScotlandYard.Ticket> ticketTypes = new ArrayList<>(List.of(ScotlandYard.Ticket.TAXI, ScotlandYard.Ticket.BUS, ScotlandYard.Ticket.UNDERGROUND, ScotlandYard.Ticket.DOUBLE, ScotlandYard.Ticket.SECRET));
 
-        //gets the log number of the gamestate.
+        //gets the log size of the gamestate.
         int logNumber = board.getMrXTravelLog().size();
 
         //initialises new mrX and players to be filled by using the information from the board.
@@ -133,9 +133,9 @@ public class StockFishYardSmall2 implements Ai {
         //for each piece in the board
         for (Piece piece : board.getPlayers()) {
             if (piece.isMrX()) {
-                //make a new ticket array that holds the amount
+                //make a new ticket array that holds the amount (turns mrX's ticket board into a 'mini ticket board' in a SmallGameStateObject)
                 Optional<Board.TicketBoard> optTicket = board.getPlayerTickets(piece);
-                for (ScotlandYard.Ticket ticket : ticketTypes) {
+                for (ScotlandYard.Ticket ticket : ticketTypes) { // for each ticket type
                     optTicket.ifPresent(tickValue -> log.add(tickValue.getCount(ticket)));
                 }
                 //new player with id 0, at the location of mrX and with the ticket array previously made
@@ -232,10 +232,6 @@ public class StockFishYardSmall2 implements Ai {
     }
 
     @Nonnull @Override public Move pickMove(@Nonnull Board board, Pair<Long, TimeUnit> timeoutPair) {
-
-        if (!board.getWinner().isEmpty()) {
-            return board.getAvailableMoves().asList().get(0);
-        }
 
         // setup is a singleton class that holds moves and graph, since these never change across the algorithm
         Setup.getInstance(board.getSetup().moves, board.getSetup().graph);
