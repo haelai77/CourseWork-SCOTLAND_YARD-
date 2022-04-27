@@ -17,6 +17,7 @@ public class PositionGetterMrX implements PositionGetter {
     public ArrayList<SmallGameState> getNextPositions(SmallGameState gameState) {
 
         ArrayList<SmallGameState> result = new ArrayList<>();
+        SmallGameState iWelcomeDeath = null;
 
         HashSet<Integer> deathNodes = new HashSet<>();
         for ( SmallPlayer det : gameState.detectives()){
@@ -35,42 +36,41 @@ public class PositionGetterMrX implements PositionGetter {
 
                 if ((gameState.mrX().tickets().get(smallTicket) > 0 || gameState.mrX().tickets().get(4) > 0) //if mrX has this ticket or a secret ticket
                         && gameState.detectives().stream().map(SmallPlayer::location).noneMatch(x -> Objects.equals(x, neighbour))
-                        && (deathNodes.stream().noneMatch(x -> Objects.equals(x, neighbour) // only add move to result if neighbour isn't a death node
-                        || deathNodes.containsAll(Setup.getInstance().graph.adjacentNodes(gameState.mrX().location())))) // if mrX neighbours are all death nodes
+                         // if mrX neighbours are all death nodes
                 ) { //and no detectives are at this node
 
                     SmallGameState singleMoveState = new SmallGameState(gameState.logNumber() + 1, gameState.mrX().travel(neighbour, List.of(smallTicket)), gameState.detectives()); // new gamestate with this new move
-                    result.add(singleMoveState); //add this to the result
 
+                    if (deathNodes.stream().noneMatch(x -> Objects.equals(x, singleMoveState.mrX().location()))) {
+                        result.add(singleMoveState); //add this to the result
+                    }
+                    else if (iWelcomeDeath == null) {
+                        iWelcomeDeath = singleMoveState;
+                    }
 
-//                    HashSet<Integer> closeBy = new HashSet<>(Setup.getInstance().graph.adjacentNodes(gameState.mrX().location()));
-//                    for (SmallPlayer det : gameState.detectives()){
-//                        if (closeBy.contains(det.location())){
-//                            detCloseBy = true;
-//                            break;
-//                        }
-//                    }
+                        if (detectiveClose && gameState.mrX().has(3)) { // if mrX has a double ticket && detective is next to mrX
 
-                    if (detectiveClose && gameState.mrX().has(3)) { // if mrX has a double ticket && detective is next to mrX
+                            //compute double moves; do the same as with single ticket and add all of these new gamestates to the result.
 
+                            for (int neighbour2 : Setup.getInstance().graph.adjacentNodes(singleMoveState.mrX().location())) {
+                                for (ScotlandYard.Transport t2 : Objects.requireNonNull(Setup.getInstance().graph.edgeValueOrDefault(singleMoveState.mrX().location(), neighbour2, ImmutableSet.of()))) {
+                                    int smallTicket2 = Setup.getSmallTicket(t2);
+                                    if ((singleMoveState.mrX().has(smallTicket2) || gameState.mrX().has(4)) //4 is a secret ticket
+                                            && singleMoveState.detectives().stream().map(SmallPlayer::location).noneMatch(x -> Objects.equals(x, neighbour2))) {
 
-                        //compute double moves; do the same as with single ticket and add all of these new gamestates to the result.
-
-                        for (int neighbour2 : Setup.getInstance().graph.adjacentNodes(singleMoveState.mrX().location())) {
-                            for (ScotlandYard.Transport t2 : Objects.requireNonNull(Setup.getInstance().graph.edgeValueOrDefault(singleMoveState.mrX().location(), neighbour2, ImmutableSet.of()))) {
-                                int smallTicket2 = Setup.getSmallTicket(t2);
-                                if ((singleMoveState.mrX().has(smallTicket2) || gameState.mrX().has(4)) //4 is a secret ticket
-                                        && singleMoveState.detectives().stream().map(SmallPlayer::location).noneMatch(x -> Objects.equals(x, neighbour2))) {
-
-                                    SmallGameState doubleMoveState = new SmallGameState(gameState.logNumber() + 1, gameState.mrX().travel(neighbour2, List.of(smallTicket2, 3)), gameState.detectives());
-                                    result.add(doubleMoveState);
+                                        SmallGameState doubleMoveState = new SmallGameState(gameState.logNumber() + 1, gameState.mrX().travel(neighbour2, List.of(smallTicket2, 3)), gameState.detectives());
+                                        result.add(doubleMoveState);
+                                    }
                                 }
                             }
                         }
-                    }
                 }
             }
         }
+        if (result.isEmpty()) {
+            result.add(iWelcomeDeath);
+        }
+
         //sorry for these curly braces
 
         return result;
