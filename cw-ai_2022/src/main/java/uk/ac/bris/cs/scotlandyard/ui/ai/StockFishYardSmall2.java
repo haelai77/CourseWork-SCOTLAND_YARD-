@@ -80,7 +80,7 @@ public class StockFishYardSmall2 implements Ai {
         for (SmallPlayer detective : gameState.detectives()) {
             score += biBFS_dist(gameState.mrX().location(), detective.location());
         }
-        score += connectivity(gameState, gameState.mrX().location(), gameState.mrX());
+        //score += connectivity(gameState, gameState.mrX().location(), gameState.mrX());
         return score;
     }
 
@@ -88,8 +88,8 @@ public class StockFishYardSmall2 implements Ai {
         int connectivityScore = 0;
 
         mainLoop:
-        for (Integer neighbour : Setup.getInstance().graph.adjacentNodes(node)) { // for every neighbour to the source node
-            for (SmallPlayer dets : gameState.detectives()){     // checks if neighbours are already occupied if so skip adding score ?
+        for (Integer neighbour : Setup.getInstance().graph.adjacentNodes(node)) { // for every neighbour to the node
+            for (SmallPlayer dets : gameState.detectives()){  // checks if neighbours are already occupied by detective take away score ?
                 if (Objects.equals(dets.location(), neighbour)) {
                     connectivityScore -= 100;
                     continue mainLoop;
@@ -125,7 +125,7 @@ public class StockFishYardSmall2 implements Ai {
         List<SmallPlayer> detectives = new ArrayList<>();
 
         //an arraylist that holds small ticket board for each player
-        List<Integer> log = new ArrayList<>();
+        List<Integer> newTickets = new ArrayList<>();
 
         //player id variable for each detective
         byte playerId = 1;
@@ -135,24 +135,25 @@ public class StockFishYardSmall2 implements Ai {
             if (piece.isMrX()) {
                 //make a new ticket array that holds the amount (turns mrX's ticket board into a 'mini ticket board' in a SmallGameStateObject)
                 Optional<Board.TicketBoard> optTicket = board.getPlayerTickets(piece);
-                for (ScotlandYard.Ticket ticket : ticketTypes) { // for each ticket type
-                    optTicket.ifPresent(tickValue -> log.add(tickValue.getCount(ticket)));
+                for (ScotlandYard.Ticket ticket : ticketTypes) { // for each ticket type add the ticket amount into the log
+                    optTicket.ifPresent(tickValue -> newTickets.add(tickValue.getCount(ticket)));
                 }
-                //new player with id 0, at the location of mrX and with the ticket array previously made
-                mrX = new SmallPlayer(0, board.getAvailableMoves().asList().get(0).source(), ImmutableList.copyOf(log));
-                log.clear();
+                //------------------------------------------------------------------------------------------------------
+                //creates a new smallPlayer which is the equivalent of Player mrX with info (location, ticketBoard)
+                mrX = new SmallPlayer(0, board.getAvailableMoves().asList().get(0).source(), ImmutableList.copyOf(newTickets)); //(id, mrxLocation, ticket amounts)
+                newTickets.clear();
             }
 
             else {
                 // do the same for each detective, but also assign them an id value from 1 going upwards.
                 Optional<Board.TicketBoard> optTicket = board.getPlayerTickets(piece);
                 for (ScotlandYard.Ticket ticket : ticketTypes) {
-                    optTicket.ifPresent(tickValue -> log.add(tickValue.getCount(ticket)));
+                    optTicket.ifPresent(tickValue -> newTickets.add(tickValue.getCount(ticket)));
                 }
 
-                detectives.add(new SmallPlayer(playerId, board.getDetectiveLocation((Piece.Detective) piece).orElse(0), ImmutableList.copyOf(log)));
+                detectives.add(new SmallPlayer(playerId, board.getDetectiveLocation((Piece.Detective) piece).orElse(0), ImmutableList.copyOf(newTickets))); // (id, location, ticket amounts)
                 playerId += 1;
-                log.clear();
+                newTickets.clear();
             }
         }
 
@@ -239,47 +240,49 @@ public class StockFishYardSmall2 implements Ai {
         //make the starting small gamestate
         SmallGameState start = makeSmallGameState(board);
 
-        DestinationVisitor v = new DestinationVisitor();
-        TicketVisitor t = new TicketVisitor();
+        //VISITOR PATTERN
+        DestinationVisitor destinationFinder = new DestinationVisitor(); //used for finding destination of a ticket (single and double moves)
+        TicketVisitor ticketFinder = new TicketVisitor();  //used for finding tickets required (single and double moves)
 
         //STRATEGY PATTERN
-        PositionGetter xGetter = new PositionGetterMrX();
-        PositionGetter dGetter = new PositionGetterDetectives();
+        PositionGetter nextPosX = new PositionGetterMrX(); // gets the next favourable positions of mrX
+        PositionGetter nextPosDet = new PositionGetterDetectives(); // gets the set of permutations of detectives inside small game states
 
-        int moveTo = firstMiniMax(start, 3, xGetter, dGetter);
+        int moveTo = firstMiniMax(start, 3, nextPosX, nextPosDet);  // returns the best node to travel to via minimax.
 
-        boolean single = (Setup.getInstance().graph.adjacentNodes(start.mrX().location()).contains(moveTo));
+        boolean single = (Setup.getInstance().graph.adjacentNodes(start.mrX().location()).contains(moveTo)); // check if the node is reachable via single move
 
-        ArrayList<Move> moves = new ArrayList<>();
-        for (Move move : board.getAvailableMoves().asList()) {
-            if (move.accept(v) == moveTo) {
-                if (single && move.accept(t).size() == 1) {
+        //TODO: tidy up :)😋
+        ArrayList<Move> moves = new ArrayList<>(); // empty array of moves
+        for (Move move : board.getAvailableMoves().asList()) { // for every possible move
+            if (move.accept(destinationFinder) == moveTo) { // if the move's destination is equal to the move returned by minmax (optimal move)
+                if (single && move.accept(ticketFinder).size() == 1) { // if it's possible to do in a single move filter out double moves
                     moves.add(move);
                 }
-                else if (!single && move.accept(t).size() == 2) {
+                else if (!single && move.accept(ticketFinder).size() == 2) { //if it's not possible by singe moves add only double moves
                     moves.add(move);
                 }
             }
         }
 
-        boolean hide = ((board.getMrXTravelLog().size() > 0) && (board.getMrXTravelLog().get(board.getMrXTravelLog().size()-1).location().orElse(-1) > -1));
+        boolean hide = ((board.getMrXTravelLog().size() > 0) && (board.getMrXTravelLog().get(board.getMrXTravelLog().size()-1).location().orElse(-1) > -1)); // if the previous was revealed
 
-        if (!hide) {
-            for (Move move : moves) {
-                    if (!move.accept(t).contains(ScotlandYard.Ticket.SECRET)) {
+        if (!hide) { // if previous move wasn't revealed
+            for (Move move : moves) { // go through all moves and return the first non-secret move
+                    if (!move.accept(ticketFinder).contains(ScotlandYard.Ticket.SECRET)) {
                         return move;
                     }
             }
         }
-        else {
-            for (Move move : moves) {
-                    if (move.accept(t).contains(ScotlandYard.Ticket.SECRET)) {
+        else { // if previous move was revealed
+            for (Move move : moves) { // go through all the moves and return the first secret move
+                    if (move.accept(ticketFinder).contains(ScotlandYard.Ticket.SECRET)) {
                         return move;
                 }
             }
         }
 
-        return moves.get(0);
+        return moves.get(0); //default return first move in possible moves
         //TODO:
         //unit tests
         //add polymorphism with players and mrx
@@ -290,3 +293,8 @@ public class StockFishYardSmall2 implements Ai {
     }
 }
 
+
+//TODO: can't escape when deathnode is avoidable by double move
+//TODO: improve run time (filter out double moves that lead to the same destination).
+//TODO: filter our single moves that lead to the same destination (dunno if this makes a huge difference cus)
+//TODO: filter out moves that lead to the same place that are already in the move set.<<<<<<<<<<<<<<

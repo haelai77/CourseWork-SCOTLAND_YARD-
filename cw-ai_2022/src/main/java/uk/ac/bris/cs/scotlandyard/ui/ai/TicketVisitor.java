@@ -9,11 +9,11 @@ import javax.annotation.concurrent.Immutable;
 public class TicketVisitor implements Move.Visitor<ImmutableList<ScotlandYard.Ticket>>{
     @Override
     public ImmutableList<ScotlandYard.Ticket> visit(Move.SingleMove move) {
-        return ImmutableList.of(move.ticket);
+        return ImmutableList.of(move.ticket); // retuns the tickets a single move uses
     }
 
     @Override
     public ImmutableList<ScotlandYard.Ticket> visit(Move.DoubleMove move) {
-        return ImmutableList.of(move.ticket1, move.ticket2);
+        return ImmutableList.of(move.ticket1, move.ticket2); //returns the tickets a double move uses
     }
 }
