@@ -23,21 +23,21 @@ public class PositionGetterMrX implements PositionGetter {
 
         //--------------------------------------------------------------------------------------------------------------
         HashSet<Integer> deathNodes = new HashSet<>();  //holds all nodes in which mrx can be taken on next turn and detective locations
-        for ( SmallPlayer det : gameState.detectives()){
+        for ( DetSmallPlayer det : gameState.detectives()){
             deathNodes.addAll(Setup.getInstance().graph.adjacentNodes(det.location()));
         }
-        deathNodes.addAll(gameState.detectives().stream().map(SmallPlayer::location).toList());
+        deathNodes.addAll(gameState.detectives().stream().map(DetSmallPlayer::location).toList());
         //--------------------------------------------------------------------------------------------------------------
 
         HashSet<Integer> closeBy = new HashSet<>(Setup.getInstance().graph.adjacentNodes(gameState.mrX().location())); // set of nodes adjacent to mrX
-        boolean detectiveClose = gameState.detectives().stream().map(SmallPlayer::location).anyMatch(closeBy::contains); // boolean to check if detective is on adjacent node to mrX
+        boolean detectiveClose = gameState.detectives().stream().map(DetSmallPlayer::location).anyMatch(closeBy::contains); // boolean to check if detective is on adjacent node to mrX
 
         for (int neighbour : closeBy) { // for each adjacent node to mrX
             for (ScotlandYard.Transport t : Objects.requireNonNull(Setup.getInstance().graph.edgeValueOrDefault(gameState.mrX().location(), neighbour, ImmutableSet.of()))) { // for each type of transport between 2 nodes
                 int smallTicket = Setup.getSmallTicket(t); //the transport ticket required to go between nodes
                 //------------------------------------------------------------------------------------------------------
                 if (gameState.mrX().has(smallTicket) //if mrX has this ticket
-                        && gameState.detectives().stream().map(SmallPlayer::location).noneMatch(x -> Objects.equals(x, neighbour)))// if neighbour node isn't occupied by detective
+                        && gameState.detectives().stream().map(DetSmallPlayer::location).noneMatch(x -> Objects.equals(x, neighbour)))// if neighbour node isn't occupied by detective
                 {
                     SmallGameState singleMoveState = new SmallGameState(gameState.logNumber() + 1, gameState.mrX().travel(neighbour, List.of(smallTicket)), gameState.detectives()); // new gamestate with mrx moved to neighbour
 
@@ -55,7 +55,7 @@ public class PositionGetterMrX implements PositionGetter {
                             for (ScotlandYard.Transport t2 : Objects.requireNonNull(Setup.getInstance().graph.edgeValueOrDefault(singleMoveState.mrX().location(), neighbour2, ImmutableSet.of()))) {
                                 int smallTicket2 = Setup.getSmallTicket(t2);
                                 if ((singleMoveState.mrX().has(smallTicket2))
-                                        && singleMoveState.detectives().stream().map(SmallPlayer::location).noneMatch(x -> Objects.equals(x, neighbour2))) {
+                                        && singleMoveState.detectives().stream().map(DetSmallPlayer::location).noneMatch(x -> Objects.equals(x, neighbour2))) {
                                     SmallGameState doubleMoveState = new SmallGameState(gameState.logNumber() + 1, gameState.mrX().travel(neighbour2, List.of(smallTicket2, 3)), gameState.detectives());
 
                                     if (deathNodes.stream().noneMatch(deathNode -> Objects.equals(deathNode, doubleMoveState.mrX().location()))) { // if mrX's location isn't a death node

@@ -18,11 +18,12 @@ public class StockFishYardSmall2 implements Ai {
     private Integer biBreadthFirstSearch(Integer mrxLocation, Integer detectiveLocation) { // finds distance between a single detective and Mrx
         //--------------------- for mrxLocation
         Map<Integer, Integer> mrXPreviousNodes = new HashMap<>() {{put(mrxLocation, null);}}; //maps nodes to their previous node
-        List<Integer> queue1 = new ArrayList<>(List.of(mrxLocation)); // next nodes to be searched
-        List<Integer> visited1 = new ArrayList<>(List.of(mrxLocation)); // visited nodes
-        //--------------------- for detectiveLocation
         Map<Integer, Integer> detectivePreviousNodes = new HashMap<>() {{put(detectiveLocation, null);}};
+        // next nodes to be searched
+        List<Integer> queue1 = new ArrayList<>(List.of(mrxLocation));
         List<Integer> queue2 = new ArrayList<>(List.of(detectiveLocation));
+        // visited nodes
+        List<Integer> visited1 = new ArrayList<>(List.of(mrxLocation));
         List<Integer> visited2 = new ArrayList<>(List.of(detectiveLocation));
         //---------------------
         Integer currentMrxLocation = mrxLocation; // holds node currently being searched on mrX's side
@@ -76,7 +77,7 @@ public class StockFishYardSmall2 implements Ai {
 
     private Integer score(SmallGameState gameState) {
         int score = 0;
-        for (SmallPlayer detective : gameState.detectives()) {
+        for (DetSmallPlayer detective : gameState.detectives()) {
             score += biBreadthFirstSearch(gameState.mrX().location(), detective.location());
         }
         score += connectivity(gameState, gameState.mrX().location());
@@ -88,7 +89,7 @@ public class StockFishYardSmall2 implements Ai {
 
         mainLoop:
         for (Integer neighbour : Setup.getInstance().graph.adjacentNodes(node)) { // for every neighbour to the node
-            for (SmallPlayer dets : gameState.detectives()){  // checks if neighbours are already occupied by detective, if so take away score
+            for (DetSmallPlayer dets : gameState.detectives()){  // checks if neighbours are already occupied by detective, if so take away score
                 if (Objects.equals(dets.location(), neighbour)) {
                     connectivityScore -= 1000;
                     continue mainLoop;
@@ -103,8 +104,8 @@ public class StockFishYardSmall2 implements Ai {
     private SmallGameState makeSmallGameState(Board board) { // converts a board into it's smaller counterpart also known as SmallGameState
         List<ScotlandYard.Ticket> ticketTypes = new ArrayList<>(List.of(ScotlandYard.Ticket.TAXI, ScotlandYard.Ticket.BUS, ScotlandYard.Ticket.UNDERGROUND, ScotlandYard.Ticket.DOUBLE, ScotlandYard.Ticket.SECRET));
         //initialises new mrX and players to be filled by using the information from the board.
-        SmallPlayer mrX = null;
-        List<SmallPlayer> detectives = new ArrayList<>();
+        MrxSmallPlayer mrX = null;
+        List<DetSmallPlayer> detectives = new ArrayList<>();
         List<Integer> newTickets = new ArrayList<>(); //an arraylist that holds small ticket board for each player
         int playerId = 1; //player id variable for each detective
         //----------------------------------------------------------------------------- MAKES A SMALL PLAYER FOR MRX AND DETECTIVES TO GO INTO A SMALLGAMESTATE
@@ -115,7 +116,7 @@ public class StockFishYardSmall2 implements Ai {
                     optTicket.ifPresent(tickValue -> newTickets.add(tickValue.getCount(ticket)));
                 }
                 //creates a new smallPlayer which is the equivalent of Player mrX with info (location, ticketBoard)
-                mrX = new SmallPlayer(0, board.getAvailableMoves().asList().get(0).source(), ImmutableList.copyOf(newTickets)); //(id, mrxLocation, ticket amounts)
+                mrX = new MrxSmallPlayer(0, board.getAvailableMoves().asList().get(0).source(),  ImmutableList.copyOf(newTickets));
                 newTickets.clear();
             }
             else {
@@ -123,7 +124,7 @@ public class StockFishYardSmall2 implements Ai {
                 for (ScotlandYard.Ticket ticket : ticketTypes) {
                     optTicket.ifPresent(tickValue -> newTickets.add(tickValue.getCount(ticket)));
                 }
-                detectives.add(new SmallPlayer(playerId, board.getDetectiveLocation((Piece.Detective) piece).orElse(0), ImmutableList.copyOf(newTickets))); // (id, location, ticket amounts)
+                detectives.add(new DetSmallPlayer(playerId, board.getDetectiveLocation((Piece.Detective) piece).orElse(0), ImmutableList.copyOf(newTickets))); // (id, location, ticket amounts)
                 playerId += 1;
                 newTickets.clear();
             }
