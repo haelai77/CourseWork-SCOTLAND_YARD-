@@ -29,7 +29,7 @@ public class SmallPlayer {
     }
 
     //returns a new player that has "travelled" to the next destination and used up the ticket.
-    public SmallPlayer travel (Integer destination, Iterable<Integer> tickets) {
+    public SmallPlayer travel (Integer destination, Iterable<Integer> tickets) { //make abstract and overide in mrXsmall player
         List<Integer> newTickets = new ArrayList<>(List.copyOf(this.tickets));
         for (Integer ticket : tickets) {
             newTickets.set(ticket, newTickets.get(ticket) - 1);
@@ -38,7 +38,7 @@ public class SmallPlayer {
         return new SmallPlayer(this.id, destination, ImmutableList.copyOf(newTickets));
     }
 
-    public SmallPlayer receive (ImmutableList<Integer> tickets) {
+    public SmallPlayer receive (ImmutableList<Integer> tickets) { // only in mrxsmall player so leave it out
         ArrayList<Integer> newTickets = new ArrayList<>(List.copyOf(this.tickets));
         for ( int i = 0; i < tickets.size(); i++) {
             newTickets.set(i, newTickets.get(i) + tickets.get(i));

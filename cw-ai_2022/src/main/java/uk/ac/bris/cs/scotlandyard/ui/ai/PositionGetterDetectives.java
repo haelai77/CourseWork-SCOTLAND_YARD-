@@ -64,6 +64,7 @@ public class PositionGetterDetectives implements PositionGetter{
                         newStates.addAll(getNextDetectivePositions(gameState, count + 1, ImmutableList.copyOf(newExisting), ImmutableList.copyOf(newUsedTickets))); //call a recursive call of this method with existing having this new detective and count incremeneted by 1
 
                         foundMove = true; //foundmove is true since a viable move has been reached.
+                        break;
                     }
                 }
             }

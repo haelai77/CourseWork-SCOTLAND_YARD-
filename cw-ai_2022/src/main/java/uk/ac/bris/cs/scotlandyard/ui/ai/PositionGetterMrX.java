@@ -65,11 +65,13 @@ public class PositionGetterMrX implements PositionGetter {
                                     else if (sureDeath == null) {
                                         sureDeath = doubleMoveState;
                                     }
+                                    break;
                                 }
                             }
                         }
                     }
                 //------------------------------------------------------------------------------------------------------
+                    break;
                 }
             }
         }
