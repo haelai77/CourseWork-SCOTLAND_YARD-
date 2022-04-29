@@ -8,7 +8,7 @@ import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-public class StockFishYardSmall2 implements Ai {
+public class StockFishYard2 implements Ai {
 
     @Nonnull
     @Override
@@ -16,7 +16,6 @@ public class StockFishYardSmall2 implements Ai {
     //---------------------------------------------------------------------------------------------------- scoring stuff
     @Nonnull
     private Integer biBreadthFirstSearch(Integer mrxLocation, Integer detectiveLocation) { // finds distance between a single detective and Mrx
-        //--------------------- for mrxLocation
         Map<Integer, Integer> mrXPreviousNodes = new HashMap<>() {{put(mrxLocation, null);}}; //maps nodes to their previous node
         Map<Integer, Integer> detectivePreviousNodes = new HashMap<>() {{put(detectiveLocation, null);}};
         // next nodes to be searched
@@ -75,7 +74,7 @@ public class StockFishYardSmall2 implements Ai {
         return length;
     }
 
-    private Integer score(SmallGameState gameState) {
+    private int score(SmallGameState gameState) {
         int score = 0;
         for (DetSmallPlayer detective : gameState.detectives()) {
             score += biBreadthFirstSearch(gameState.mrX().location(), detective.location());
@@ -95,7 +94,7 @@ public class StockFishYardSmall2 implements Ai {
                     continue mainLoop;
                 }
             }
-            connectivityScore += 5;
+            connectivityScore += 1;
         }
         return connectivityScore;
     }
@@ -116,7 +115,7 @@ public class StockFishYardSmall2 implements Ai {
                     optTicket.ifPresent(tickValue -> newTickets.add(tickValue.getCount(ticket)));
                 }
                 //creates a new smallPlayer which is the equivalent of Player mrX with info (location, ticketBoard)
-                mrX = new MrxSmallPlayer(0, board.getAvailableMoves().asList().get(0).source(),  ImmutableList.copyOf(newTickets));
+                mrX = new MrxSmallPlayer(board.getAvailableMoves().asList().get(0).source(),  ImmutableList.copyOf(newTickets));
                 newTickets.clear();
             }
             else {
@@ -176,33 +175,34 @@ public class StockFishYardSmall2 implements Ai {
     private Integer firstMiniMax(SmallGameState gameState, int depth, PositionGetter x, PositionGetter d, long timelimit) {
         long start = System.currentTimeMillis();
 
+        //initialise alpha and beta values
         int alpha = Integer.MIN_VALUE;
         int beta = Integer.MAX_VALUE;
         int maxEval = Integer.MIN_VALUE;
         int eval;
         SmallGameState g = null;
 
-        for (SmallGameState gameState1 : x.getNextPositions(gameState)) {
-            eval = miniMax(gameState1, depth-1, alpha, beta, false, x, d, timelimit, start);
-            if (eval == -1) {return -1;}
-            if (eval >= maxEval) {
+        //get the next positions for Mr X
+        for (SmallGameState gameState1 : x.getNextPositions(gameState)) { //for each position
+            eval = miniMax(gameState1, depth-1, alpha, beta, false, x, d, timelimit, start); //return the minimax result
+            if (eval >= maxEval) { //keep track of the largest evaluated score
                 maxEval = eval;
-                g = gameState1;
+                g = gameState1; //keep track of the gamestate of this score
             }
-            alpha = Integer.max(alpha, eval);
+            alpha = Integer.max(alpha, eval); //alpha for alpha beta pruning
             if (beta <= alpha) {
                 break;
             }
         }
-
         assert g != null;
-        return g.mrX().location();
+        return g.mrX().location(); //return the gamestate location of mr x
     }
 
     private Move hiddenMoveFilter(SmallGameState start, Board board, int moveTo, DestinationVisitor destinationFinder, TicketVisitor ticketFinder) {
         boolean single = (Setup.getInstance().graph.adjacentNodes(start.mrX().location()).contains(moveTo)); // check if the node is reachable via single move
+        boolean hide = ((board.getMrXTravelLog().size() > 0) && board.getMrXTravelLog().get(board.getMrXTravelLog().size()-1).location().isPresent()); //check if the previous move was revealed
 
-        //---------------------------------------------- puts all the moves lead to the same out come provided minimax into an array
+        //---------------------------------------------- puts all the moves lead to the same outcome provided minimax into an array
         ArrayList<Move> moves = new ArrayList<>();
         for (Move move : board.getAvailableMoves().asList()) { // for every possible move
             if (move.accept(destinationFinder) == moveTo) { // if the move's destination is equal to the move returned by minmax (optimal move)
@@ -215,27 +215,25 @@ public class StockFishYardSmall2 implements Ai {
             }
         }
         //-----------------------------------------------calculates if mr x does a hidden after a revealed move
-        boolean hide = ((board.getMrXTravelLog().size() > 0) && board.getMrXTravelLog().get(board.getMrXTravelLog().size()-1).location().isPresent()); //check if the previous move was revealed
-
-        if (!hide) { // if previous move wasn't revealed
-            for (Move move : moves) { // go through all moves and return the first non-secret move
-                if (!move.accept(ticketFinder).contains(ScotlandYard.Ticket.SECRET)) {
-                    return move;
+        if (!single && Setup.getInstance().moves.get(board.getMrXTravelLog().size())) {
+                for (Move move : moves) {
+                    if (move.accept(ticketFinder).get(1) == ScotlandYard.Ticket.SECRET && move.accept(ticketFinder).get(0) != ScotlandYard.Ticket.SECRET) {
+                        return move;
+                    }
                 }
+        }
+        for (Move move : moves) { // if hide is true, return the first hidden move and if false return the first secret move found.
+            if (hide  ==  move.accept(ticketFinder).contains(ScotlandYard.Ticket.SECRET)) {
+                return move;
             }
         }
-        else { // if previous move was revealed
-            for (Move move : moves) { // go through all the moves and return the first secret move
-                if (move.accept(ticketFinder).contains(ScotlandYard.Ticket.SECRET)) {
-                    return move;
-                }
-            }
-        }
-
         return moves.get(0); //default return first move in possible moves
     }
 
     @Nonnull @Override public Move pickMove(@Nonnull Board board, Pair<Long, TimeUnit> timeoutPair) {
+        if (!board.getAvailableMoves().asList().get(0).commencedBy().isMrX()) {
+            throw new IllegalArgumentException("detective using mr x ai");
+        }
         // setup is a singleton class that holds moves and graph, since these never change across the algorithm
         Setup.getInstance(board.getSetup().moves, board.getSetup().graph);
 
@@ -256,16 +254,7 @@ public class StockFishYardSmall2 implements Ai {
 
         int moveTo = firstMiniMax(start, 3, nextPosX, nextPosDet, timelimit -250);  // returns the best node to travel to via minimax
         return hiddenMoveFilter(start, board, moveTo, destinationFinder, ticketFinder) ; //default return first move in possible moves
-
     }
 }
 
-
-//TODO: can't escape when deathnode is avoidable by double move xx
-//TODO: improve run time (filter out double moves that lead to the same destination). xx
-//TODO: filter our single moves that lead to the same destination (dunno if this makes a huge difference cus) xx
-//TODO: filter out moves that lead to the same place that are already in the move set. xx
-//TODO: add tests for scoring fucntion. <<<<<<<<<<<<<
 //TODO: refactor code
-//TODO: fix 0 taxi tickets
-//TODO: add 15 second thread timer to default to a move before 15 seconds

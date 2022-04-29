@@ -14,6 +14,9 @@ public abstract class AbstractSmallPlayer {
         this.id = id;
         this.location = location;
         this.tickets = tickets;
+        if (tickets.size() != 5) {
+            throw new IllegalArgumentException("tickets is wrong");
+        }
     }
 
     public Integer id() {return this.id;}
@@ -26,6 +29,6 @@ public abstract class AbstractSmallPlayer {
 
     //------------------------------------------------------------------
     //returns a new player that has "travelled" to the next destination and used up the ticket.
-//    abstract AbstractSmallPlayer travel (Integer destination, Iterable<Integer> tickets);
+    abstract AbstractSmallPlayer travel (Integer destination, Iterable<Integer> tickets);
 
 }

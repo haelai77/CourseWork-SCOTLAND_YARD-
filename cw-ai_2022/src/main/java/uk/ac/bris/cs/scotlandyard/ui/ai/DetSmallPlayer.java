@@ -10,11 +10,16 @@ public class DetSmallPlayer extends AbstractSmallPlayer{
 
     DetSmallPlayer(int id, int location, ImmutableList<Integer> tickets){
         super(id, location, tickets);
+        if (id == 0 || tickets.size() != 5 || tickets.get(3) > 0 || tickets.get(4) > 0) {
+            throw new IllegalArgumentException("wrong instantiation of detective");
+        }
     }
 
-    public DetSmallPlayer travel(Integer destination, int ticket) {
+    @Override
+    public DetSmallPlayer travel(Integer destination, Iterable<Integer> ticket) { //covariant overriding
         List<Integer> newTicket = new ArrayList<>(List.copyOf(this.tickets));
-        newTicket.set(ticket, newTicket.get(ticket) - 1);
+        int ticketD = ticket.iterator().next();
+        newTicket.set(ticketD, newTicket.get(ticketD) - 1);
         return new DetSmallPlayer(this.id, destination, ImmutableList.copyOf(newTicket));
     }
 }

@@ -59,7 +59,7 @@ public class PositionGetterDetectives implements PositionGetter{
 
                         ArrayList<Integer> newUsedTickets = new ArrayList<>(List.copyOf(usedTickets)); //copy of used tickets to give to mrX
                         newUsedTickets.set(smallTicket, newUsedTickets.get(smallTicket) + 1); //add this ticket to the usedtickets
-                        newExisting.add(detective.travel(neighbour, smallTicket));//add to existing the new player at this location, having used up a ticket
+                        newExisting.add(detective.travel(neighbour, List.of(smallTicket)));//add to existing the new player at this location, having used up a ticket
 
                         newStates.addAll(getNextDetectivePositions(gameState, count + 1, ImmutableList.copyOf(newExisting), ImmutableList.copyOf(newUsedTickets))); //call a recursive call of this method with existing having this new detective and count incremeneted by 1
 

@@ -15,6 +15,9 @@ public class SmallGameState {
         this.logNumber = logNumber;
         this.mrX = mrX;
         this.detectives = detectives;
+        if(mrX == null || detectives.isEmpty()) {
+            throw new IllegalArgumentException("no valid players");
+        }
     }
 
     public int logNumber() {return this.logNumber;}

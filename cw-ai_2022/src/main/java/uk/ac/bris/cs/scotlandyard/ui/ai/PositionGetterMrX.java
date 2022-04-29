@@ -30,7 +30,8 @@ public class PositionGetterMrX implements PositionGetter {
         //--------------------------------------------------------------------------------------------------------------
 
         HashSet<Integer> closeBy = new HashSet<>(Setup.getInstance().graph.adjacentNodes(gameState.mrX().location())); // set of nodes adjacent to mrX
-        boolean detectiveClose = gameState.detectives().stream().map(DetSmallPlayer::location).anyMatch(closeBy::contains); // boolean to check if detective is on adjacent node to mrX
+        boolean detectiveClose = gameState.detectives().stream().map(DetSmallPlayer::location).filter(closeBy::contains).toList().size() > 1; // boolean to check if detective is on adjacent node to mrX
+
 
         for (int neighbour : closeBy) { // for each adjacent node to mrX
             for (ScotlandYard.Transport t : Objects.requireNonNull(Setup.getInstance().graph.edgeValueOrDefault(gameState.mrX().location(), neighbour, ImmutableSet.of()))) { // for each type of transport between 2 nodes
@@ -49,7 +50,7 @@ public class PositionGetterMrX implements PositionGetter {
                         sureDeath = singleMoveState;
                     }
 
-                    if (detectiveClose && gameState.mrX().has(3)) { // if mrX has a double ticket && detective is next to mrX
+                    if ((detectiveClose || result.isEmpty()) && gameState.mrX().has(3)) { // if mrX has a double ticket && detective is next to mrX
                         //compute double moves; do the same as with single ticket and add all of these new gamestates to the result.
                         for (int neighbour2 : Setup.getInstance().graph.adjacentNodes(singleMoveState.mrX().location())) {
                             for (ScotlandYard.Transport t2 : Objects.requireNonNull(Setup.getInstance().graph.edgeValueOrDefault(singleMoveState.mrX().location(), neighbour2, ImmutableSet.of()))) {
@@ -62,7 +63,7 @@ public class PositionGetterMrX implements PositionGetter {
                                         result.add(doubleMoveState); //add this to the result
                                     }
 
-                                    else if (sureDeath == null) {
+                                    else if (sureDeath == null) { //this only allows a single instance of deathnodes
                                         sureDeath = doubleMoveState;
                                     }
                                     break;
@@ -75,11 +76,9 @@ public class PositionGetterMrX implements PositionGetter {
                 }
             }
         }
-        if (result.isEmpty()) {
+        if (result.isEmpty()) { //only add a suredeath node if there are no other nodes to go to.
             result.add(sureDeath);
         }
-
-        //sorry for these curly braces
 
         return result;
     }
