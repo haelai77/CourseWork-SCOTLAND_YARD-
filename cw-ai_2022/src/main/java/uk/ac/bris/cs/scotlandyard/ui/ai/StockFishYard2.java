@@ -134,40 +134,42 @@ public class StockFishYard2 implements Ai {
     //this is the minimax method, which follows the classic minimax algorithm that we all know and love
     private Integer miniMax(SmallGameState gameState, int depth, int alpha, int beta, Boolean mrXturn, PositionGetter x, PositionGetter d, long timelimit, long start) {
 
+        //check if the time is about to run out, if so return with score
         if(System.currentTimeMillis() - start > timelimit) {
             return score(gameState);
         }
-
+        //return maxInt or minInt if mr X has won or lost respectively
         int win = gameState.didSomeoneWin(mrXturn);
         if (win != 0) {return win;}
-        else if (depth == 0) {return score(gameState);}
+
+        if (depth == 0) {return score(gameState);} //score the gamestate if the depth is at the end and return it
 
         else if (mrXturn) {
-            int maxEval = Integer.MIN_VALUE;
-            int eval;
-            for (SmallGameState gameState1 : x.getNextPositions(gameState)) {
-                eval = miniMax(gameState1, depth-1, alpha, beta, false, x, d, timelimit, start);
-                maxEval = Integer.max(maxEval, eval);
-                alpha = Integer.max(alpha, eval);
+            int maxEvaluation = Integer.MIN_VALUE;
+            int evaluation;
+            for (SmallGameState gameState1 : x.getNextPositions(gameState)) { //get the next positions for mr x
+                evaluation = miniMax(gameState1, depth-1, alpha, beta, false, x, d, timelimit, start); //call minimax recursively
+                maxEvaluation = Integer.max(maxEvaluation, evaluation); //keep track of the maximum evaluation
+                alpha = Integer.max(alpha, evaluation); //keep track of alpha
                 if (beta <= alpha
                         || System.currentTimeMillis() - start > timelimit) {
-                    break;
+                    break; //consider alpha beta pruning
                 }
             }
-            return maxEval;
+            return maxEvaluation;
         }
         else {
-            int minEval = Integer.MAX_VALUE;
-            int eval;
-            for (SmallGameState gameState1 : d.getNextPositions(gameState)) {
-                eval = miniMax(gameState1, depth-1, alpha, beta, true, x, d, timelimit, start);
-                minEval = Integer.min(minEval, eval);
-                beta = Integer.min(beta, eval);
+            int minEvaluation = Integer.MAX_VALUE;
+            int evaluation;
+            for (SmallGameState gameState1 : d.getNextPositions(gameState)) { //get the next detective positions
+                evaluation = miniMax(gameState1, depth-1, alpha, beta, true, x, d, timelimit, start); //recursively call minimax
+                minEvaluation = Integer.min(minEvaluation, evaluation); //keep track of the lowest score possible
+                beta = Integer.min(beta, evaluation); //keep track of beta
                 if (beta <= alpha || System.currentTimeMillis() - start > timelimit) {
-                    break;
+                    break; //consider alpha beta pruning
                 }
             }
-            return minEval;
+            return minEvaluation;
         }
     }
 
@@ -178,20 +180,20 @@ public class StockFishYard2 implements Ai {
         //initialise alpha and beta values
         int alpha = Integer.MIN_VALUE;
         int beta = Integer.MAX_VALUE;
-        int maxEval = Integer.MIN_VALUE;
-        int eval;
+        int maxEvaluation = Integer.MIN_VALUE;
+        int evaluation;
         SmallGameState g = null;
 
         //get the next positions for Mr X
         for (SmallGameState gameState1 : x.getNextPositions(gameState)) { //for each position
-            eval = miniMax(gameState1, depth-1, alpha, beta, false, x, d, timelimit, start); //return the minimax result
-            if (eval >= maxEval) { //keep track of the largest evaluated score
-                maxEval = eval;
+            evaluation = miniMax(gameState1, depth-1, alpha, beta, false, x, d, timelimit, start); //return the minimax result
+            if (evaluation >= maxEvaluation) { //keep track of the largest evaluated score
+                maxEvaluation = evaluation;
                 g = gameState1; //keep track of the gamestate of this score
             }
-            alpha = Integer.max(alpha, eval); //alpha for alpha beta pruning
+            alpha = Integer.max(alpha, evaluation); //alpha for alpha beta pruning
             if (beta <= alpha) {
-                break;
+                break; //consider alpha beta pruning
             }
         }
         assert g != null;
@@ -256,5 +258,3 @@ public class StockFishYard2 implements Ai {
         return hiddenMoveFilter(start, board, moveTo, destinationFinder, ticketFinder) ; //default return first move in possible moves
     }
 }
-
-//TODO: refactor code
