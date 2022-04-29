@@ -18,6 +18,7 @@ public final class MyModelFactory implements Factory<Model> {
 		// TODO
 	return new Model()
 	{
+		//instantiate a set of observer objects
 		final HashSet<Observer> observers = new HashSet<>();
 		Board.GameState state = new MyGameStateFactory().build(setup, mrX, detectives);
 
@@ -28,6 +29,7 @@ public final class MyModelFactory implements Factory<Model> {
 			return state;
 		}
 
+		//adds an observer to the set of observers
 		@Override
 		public void registerObserver(@Nonnull Observer observer) {
 			if (observer.equals(null)) {
@@ -39,6 +41,7 @@ public final class MyModelFactory implements Factory<Model> {
 			observers.add(observer);
 		}
 
+		//removes an observer from the set of observers
 		@Override
 		public void unregisterObserver(@Nonnull Observer observer) {
 			if (observer.equals(null)) {
@@ -50,12 +53,14 @@ public final class MyModelFactory implements Factory<Model> {
 			observers.remove(observer);
 		}
 
+		//return all observers
 		@Nonnull
 		@Override
 		public ImmutableSet<Observer> getObservers() {
 			return ImmutableSet.copyOf(observers);
 		}
 
+		//advance the model with a move and update the observers
 		@Override
 		public void chooseMove(@Nonnull Move move){
 			state = state.advance(move);
